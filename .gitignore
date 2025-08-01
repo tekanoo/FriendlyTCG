@@ -46,11 +46,14 @@ app.*.map.json
 # Web related
 /web/*.dart.js
 /web/*.dart.js.map
+/web/index.html.backup
+/build/web/
 
-# Firebase
+# Firebase hosting
 .firebase/
 firebase-debug.log
 firebase-debug.*.log
+firebase-tools-instant-win.exe
 
 # Environment variables
 .env
@@ -59,3 +62,31 @@ firebase-debug.*.log
 
 # API Keys (keep your secrets safe!)
 lib/config/api_keys.dart
+# firebase_options.dart contient des clés publiques Firebase Web (sûres à committer)
+# Décommentez la ligne suivante si vous préférez les garder privées :
+# lib/firebase_options.dart
+
+# VRAIES clés secrètes (ne jamais committer) :
+# lib/config/service_account.json
+# lib/config/private_keys.dart
+# *.pem
+# *.p12
+
+# Development
+.vscode/settings.json
+.vscode/launch.json
+
+# Firebase RC file (contains project aliases)
+# .firebaserc - À décommenter si vous voulez garder ce fichier privé
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+*.code-workspace
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
