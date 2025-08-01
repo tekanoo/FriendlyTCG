@@ -34,7 +34,6 @@ dependencies:
   # Firebase dependencies for web
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3
-  google_sign_in: ^6.2.1
   
   # UI components
   cupertino_icons: ^1.0.8

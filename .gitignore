@@ -90,3 +90,15 @@ lib/config/api_keys.dart
 # OS generated files
 Thumbs.db
 ehthumbs.db
+
+# Logs supplémentaires
+*.log.*
+npm-debug.log*
+
+# Cache directories
+.npm
+.eslintcache
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov

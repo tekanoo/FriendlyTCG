@@ -1,10 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Obtenir l'utilisateur actuel
   User? get currentUser => _firebaseAuth.currentUser;
@@ -12,48 +10,65 @@ class AuthService {
   // Stream pour écouter les changements d'état d'authentification
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
-  // Connexion avec Google
+  // Connexion avec Google - Version simplifiée pour le web
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // Déclencher le processus d'authentification
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Créer un provider Google
+      GoogleAuthProvider googleProvider = GoogleAuthProvider();
       
-      if (googleUser == null) {
-        // L'utilisateur a annulé la connexion
-        return null;
+      // Configurer les scopes
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+      
+      // Configurer des paramètres personnalisés pour éviter les erreurs
+      googleProvider.setCustomParameters({
+        'prompt': 'select_account',
+        'hd': null, // Permettre tous les domaines
+      });
+
+      // Se connecter avec Firebase Auth
+      if (kIsWeb) {
+        // Pour le web, utiliser signInWithPopup avec gestion d'erreurs améliorée
+        try {
+          return await _firebaseAuth.signInWithPopup(googleProvider);
+        } catch (popupError) {
+          debugPrint('Erreur popup: $popupError');
+          // Fallback vers redirect si popup échoue
+          await _firebaseAuth.signInWithRedirect(googleProvider);
+          return null; // Le redirect gérera la suite
+        }
+      } else {
+        // Pour mobile (non utilisé dans ce projet)
+        return await _firebaseAuth.signInWithPopup(googleProvider);
       }
-
-      // Obtenir les détails d'authentification de la demande
-      final GoogleSignInAuthentication googleAuth = 
-          await googleUser.authentication;
-
-      // Créer un credential pour Firebase
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Se connecter à Firebase avec le credential
-      return await _firebaseAuth.signInWithCredential(credential);
     } on FirebaseAuthException catch (e) {
-      // Utiliser un logger en production au lieu de print
-      debugPrint('Erreur d\'authentification Firebase: ${e.message}');
-      rethrow;
+      debugPrint('Erreur Firebase Auth: ${e.code} - ${e.message}');
+      
+      // Gestion des erreurs spécifiques
+      switch (e.code) {
+        case 'popup-blocked':
+          throw Exception('Popup bloqué par le navigateur. Veuillez autoriser les popups.');
+        case 'popup-closed-by-user':
+          return null; // L'utilisateur a fermé la popup
+        case 'network-request-failed':
+          throw Exception('Erreur réseau. Vérifiez votre connexion.');
+        case 'too-many-requests':
+          throw Exception('Trop de tentatives. Réessayez plus tard.');
+        default:
+          throw Exception('Erreur d\'authentification: ${e.message}');
+      }
     } catch (e) {
-      debugPrint('Erreur lors de la connexion Google: $e');
-      rethrow;
+      debugPrint('Erreur générale: $e');
+      throw Exception('Erreur lors de la connexion. Réessayez plus tard.');
     }
   }
 
-  // Déconnexion
+  // Déconnexion simplifiée
   Future<void> signOut() async {
     try {
-      await Future.wait([
-        _firebaseAuth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
+      await _firebaseAuth.signOut();
     } catch (e) {
-      debugPrint('Erreur lors de la déconnexion: $e');
+      debugPrint('Erreur déconnexion: $e');
       rethrow;
     }
   }

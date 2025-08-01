@@ -14,6 +14,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   Future<void> _signInWithGoogle() async {
+    if (_isLoading) return; // Éviter les clics multiples
+    
     setState(() {
       _isLoading = true;
     });
@@ -22,16 +24,35 @@ class _LoginScreenState extends State<LoginScreen> {
       final UserCredential? result = await _authService.signInWithGoogle();
       
       if (result != null && mounted) {
-        // Connexion réussie, rediriger vers l'écran principal
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Connexion réussie, l'AuthWrapper gérera automatiquement la navigation
+        debugPrint('Connexion réussie pour: ${result.user?.email}');
+      } else if (mounted) {
+        // L'utilisateur a annulé ou redirect en cours
+        debugPrint('Connexion annulée ou redirect en cours');
       }
     } catch (e) {
       if (mounted) {
-        // Afficher un message d'erreur
+        // Afficher un message d'erreur plus convivial
+        String errorMessage = 'Erreur lors de la connexion';
+        
+        if (e.toString().contains('popup')) {
+          errorMessage = 'Veuillez autoriser les popups pour vous connecter';
+        } else if (e.toString().contains('réseau') || e.toString().contains('network')) {
+          errorMessage = 'Vérifiez votre connexion internet';
+        } else if (e.toString().contains('many-requests')) {
+          errorMessage = 'Trop de tentatives. Réessayez dans quelques minutes';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la connexion: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Réessayer',
+              textColor: Colors.white,
+              onPressed: () => _signInWithGoogle(),
+            ),
           ),
         );
       }
