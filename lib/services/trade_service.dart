@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import '../models/user_with_location.dart';
 
 class TradeService {
   static final TradeService _instance = TradeService._internal();
@@ -27,6 +28,49 @@ class TradeService {
       debugPrint('✅ Informations utilisateur mises à jour');
     } catch (e) {
       debugPrint('❌ Erreur mise à jour utilisateur: $e');
+    }
+  }
+
+  // Rechercher les utilisateurs qui possèdent des cartes spécifiques avec localisation
+  Future<Map<String, List<UserWithLocation>>> findUsersWithCardsAndLocation(List<String> cardNames) async {
+    try {
+      final Map<String, List<UserWithLocation>> result = {};
+      
+      // Initialiser le résultat
+      for (String cardName in cardNames) {
+        result[cardName] = [];
+      }
+
+      // Récupérer tous les utilisateurs (sauf l'utilisateur connecté)
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return result;
+
+      final usersSnapshot = await _firestore.collection('users').get();
+      
+      for (var doc in usersSnapshot.docs) {
+        // Ignorer l'utilisateur connecté
+        if (doc.id == currentUser.uid) continue;
+        
+        try {
+          final userData = doc.data();
+          final user = UserWithLocation.fromFirestore(userData, doc.id);
+          
+          // Vérifier quelles cartes cet utilisateur possède
+          for (String cardName in cardNames) {
+            if (user.hasCard(cardName)) {
+              result[cardName]!.add(user);
+            }
+          }
+        } catch (e) {
+          debugPrint('❌ Erreur lors du traitement de l\'utilisateur ${doc.id}: $e');
+        }
+      }
+
+      debugPrint('✅ Recherche terminée pour ${cardNames.length} cartes');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la recherche d\'utilisateurs: $e');
+      return {};
     }
   }
 

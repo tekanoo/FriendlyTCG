@@ -15,12 +15,26 @@ class UserProfileService {
   Future<UserProfileModel?> getCurrentUserProfile() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return null;
+      if (user == null) {
+        debugPrint('❌ Utilisateur non connecté');
+        return null;
+      }
 
+      debugPrint('🔄 Chargement du profil pour: ${user.uid}');
+      
       final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (!doc.exists) return null;
+      if (!doc.exists) {
+        debugPrint('⚠️ Document utilisateur n\'existe pas');
+        return null;
+      }
 
-      return UserProfileModel.fromMap(doc.data()!, user.uid);
+      final data = doc.data()!;
+      debugPrint('🔍 Données récupérées de Firestore: $data');
+      
+      final profile = UserProfileModel.fromMap(data, user.uid);
+      debugPrint('🔍 Profil décodé - country: "${profile.country}", region: "${profile.region}", city: "${profile.city}"');
+      
+      return profile;
     } catch (e) {
       debugPrint('❌ Erreur lors de la récupération du profil: $e');
       return null;
@@ -57,22 +71,41 @@ class UserProfileService {
   }) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        debugPrint('❌ Utilisateur non connecté');
+        return false;
+      }
+
+      debugPrint('🔄 INPUT - country: "$country", region: "$region", city: "$city"');
+
+      // Validation stricte des données
+      final cleanCountry = country?.trim();
+      final cleanRegion = region?.trim();
+      final cleanCity = city?.trim();
+
+      debugPrint('🔄 CLEAN - country: "$cleanCountry", region: "$cleanRegion", city: "$cleanCity"');
 
       final Map<String, dynamic> locationData = {
         'lastUpdated': FieldValue.serverTimestamp(),
+        'country': cleanCountry?.isNotEmpty == true ? cleanCountry : null,
+        'region': cleanRegion?.isNotEmpty == true ? cleanRegion : null,
+        'city': cleanCity?.isNotEmpty == true ? cleanCity : null,
       };
 
-      if (country != null) locationData['country'] = country;
-      if (region != null) locationData['region'] = region;
-      if (city != null) locationData['city'] = city;
+      debugPrint('🔄 Données finales à sauvegarder: $locationData');
 
       await _firestore.collection('users').doc(user.uid).set(
         locationData,
         SetOptions(merge: true),
       );
 
-      debugPrint('✅ Localisation utilisateur mise à jour');
+      debugPrint('✅ Sauvegarde terminée, vérification...');
+
+      // Vérification immédiate après sauvegarde
+      final docSnapshot = await _firestore.collection('users').doc(user.uid).get();
+      final savedData = docSnapshot.data();
+      debugPrint('🔍 Données vérifiées dans Firestore: $savedData');
+      
       return true;
     } catch (e) {
       debugPrint('❌ Erreur lors de la mise à jour de la localisation: $e');

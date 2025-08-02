@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/user_profile_model.dart';
 import '../services/user_profile_service.dart';
+import '../services/geographic_data.dart';
+import '../widgets/autocomplete_dropdown_field.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -21,7 +23,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   late TextEditingController _regionController;
   late TextEditingController _cityController;
   
-  List<String> _popularCountries = [];
+  List<String> _availableCountries = [];
+  List<String> _availableRegions = [];
+  List<String> _availableCities = [];
 
   @override
   void initState() {
@@ -30,7 +34,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _regionController = TextEditingController();
     _cityController = TextEditingController();
     _loadProfile();
-    _loadPopularCountries();
+    _initializeGeographicData();
   }
 
   @override
@@ -39,6 +43,43 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _regionController.dispose();
     _cityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeGeographicData() async {
+    setState(() {
+      _availableCountries = GeographicData.getAllCountries();
+    });
+  }
+
+  void _updateRegions(String country) {
+    setState(() {
+      _availableRegions = GeographicData.getRegionsForCountry(country);
+      _regionController.clear();
+      _cityController.clear();
+      _availableCities = [];
+    });
+  }
+
+  void _updateRegionsForCountryChange(String country) {
+    setState(() {
+      _availableRegions = GeographicData.getRegionsForCountry(country);
+      // Ne pas vider les contrôleurs lors de l'initialisation
+      _availableCities = [];
+    });
+  }
+
+  void _updateCities(String region) {
+    setState(() {
+      _availableCities = GeographicData.getCitiesForRegion(region);
+      _cityController.clear();
+    });
+  }
+
+  void _updateCitiesForRegionChange(String region) {
+    setState(() {
+      _availableCities = GeographicData.getCitiesForRegion(region);
+      // Ne pas vider le contrôleur lors de l'initialisation
+    });
   }
 
   Future<void> _loadProfile() async {
@@ -51,6 +92,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _regionController.text = profile?.region ?? '';
           _cityController.text = profile?.city ?? '';
           _isLoading = false;
+          
+          // Mettre à jour les listes déroulantes basées sur la sélection actuelle
+          if (profile?.country?.isNotEmpty == true) {
+            _updateRegionsForCountryChange(profile!.country!);
+            if (profile.region?.isNotEmpty == true) {
+              _updateCitiesForRegionChange(profile.region!);
+            }
+          }
         });
       }
     } catch (e) {
@@ -63,27 +112,61 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  Future<void> _loadPopularCountries() async {
-    try {
-      final countries = await _profileService.getPopularCountries();
-      if (mounted) {
-        setState(() => _popularCountries = countries);
-      }
-    } catch (e) {
-      debugPrint('Erreur lors du chargement des pays populaires: $e');
-    }
-  }
-
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez remplir tous les champs obligatoires correctement'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Vérifications supplémentaires pour s'assurer que les valeurs sont valides
+    final country = _countryController.text.trim();
+    final region = _regionController.text.trim();
+    final city = _cityController.text.trim();
+
+    if (country.isEmpty || !_availableCountries.contains(country)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez sélectionner un pays valide'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (region.isEmpty || !_availableRegions.contains(region)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez sélectionner une région valide'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (city.isEmpty || !_availableCities.contains(city)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez sélectionner une ville valide'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
     try {
+      debugPrint('🔄 Sauvegarde du profil avec: country="$country", region="$region", city="$city"');
+      
       final success = await _profileService.updateUserLocation(
-        country: _countryController.text.trim().isEmpty ? null : _countryController.text.trim(),
-        region: _regionController.text.trim().isEmpty ? null : _regionController.text.trim(),
-        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+        country: country,
+        region: region,
+        city: city,
       );
 
       if (mounted) {
@@ -94,7 +177,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.of(context).pop();
+          // Recharger le profil pour vérifier la sauvegarde
+          await _loadProfile();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -107,7 +191,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -124,15 +211,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         title: const Text('Mon Profil'),
         actions: [
           if (!_isLoading)
-            TextButton(
-              onPressed: _isSaving ? null : _saveProfile,
-              child: _isSaving 
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Sauvegarder', style: TextStyle(color: Colors.white)),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: _isSaving 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Sauvegarder', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
             ),
         ],
       ),
@@ -191,53 +293,53 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Champ Pays
-                    TextFormField(
+                    // Champ Pays avec autocomplétion
+                    AutocompleteDropdownField(
+                      label: 'Pays',
+                      hintText: 'Ex: France, Canada, Japon...',
+                      prefixIcon: Icons.public,
                       controller: _countryController,
-                      decoration: InputDecoration(
-                        labelText: 'Pays',
-                        hintText: 'Ex: France, Canada, Japon...',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.public),
-                        suffixIcon: _popularCountries.isNotEmpty 
-                          ? PopupMenuButton<String>(
-                              icon: const Icon(Icons.arrow_drop_down),
-                              onSelected: (country) {
-                                _countryController.text = country;
-                              },
-                              itemBuilder: (context) => _popularCountries
-                                  .map((country) => PopupMenuItem(
-                                        value: country,
-                                        child: Text(country),
-                                      ))
-                                  .toList(),
-                            )
-                          : null,
-                      ),
+                      options: _availableCountries,
+                      isRequired: true,
+                      strictValidation: true,
+                      onChanged: (value) {
+                        if (value.isNotEmpty && _availableCountries.contains(value)) {
+                          _updateRegions(value);
+                        } else if (value.isEmpty) {
+                          _updateRegions('');
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
 
-                    // Champ Région
-                    TextFormField(
+                    // Champ Région avec autocomplétion
+                    AutocompleteDropdownField(
+                      label: 'Région/Département',
+                      hintText: 'Ex: Île-de-France, Québec, Tokyo...',
+                      prefixIcon: Icons.location_on,
                       controller: _regionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Région/Département',
-                        hintText: 'Ex: Île-de-France, Québec, Tokyo...',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
+                      options: _availableRegions,
+                      isRequired: true, // Région obligatoire
+                      strictValidation: true,
+                      onChanged: (value) {
+                        if (value.isNotEmpty && _availableRegions.contains(value)) {
+                          _updateCities(value);
+                        } else if (value.isEmpty) {
+                          _updateCities('');
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
 
-                    // Champ Ville
-                    TextFormField(
+                    // Champ Ville avec autocomplétion
+                    AutocompleteDropdownField(
+                      label: 'Ville',
+                      hintText: 'Ex: Paris, Montréal, Tokyo...',
+                      prefixIcon: Icons.location_city,
                       controller: _cityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Ville',
-                        hintText: 'Ex: Paris, Montréal, Tokyo...',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_city),
-                      ),
+                      options: _availableCities,
+                      isRequired: true, // Ville obligatoire
+                      strictValidation: true,
                     ),
                     const SizedBox(height: 24),
 

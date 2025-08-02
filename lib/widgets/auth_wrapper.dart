@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/onboarding_screen.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -88,9 +89,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
         
         // Utilisateur connecté
         if (snapshot.hasData && snapshot.data != null) {
-          debugPrint('AuthWrapper: Utilisateur connecté détecté: ${snapshot.data?.email}');
-          debugPrint('AuthWrapper: Affichage de HomeScreen');
+          final user = snapshot.data!;
+          debugPrint('AuthWrapper: Utilisateur connecté détecté: ${user.email}');
           
+          // Vérifier si l'onboarding est nécessaire
+          final needsOnboarding = user.displayName == null || 
+                                  user.displayName!.isEmpty || 
+                                  user.displayName == user.email?.split('@').first;
+          
+          if (needsOnboarding) {
+            debugPrint('AuthWrapper: Onboarding nécessaire pour ${user.email}');
+            return const OnboardingScreen();
+          }
+          
+          debugPrint('AuthWrapper: Affichage de HomeScreen');
           return const HomeScreen();
         }
         

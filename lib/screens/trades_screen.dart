@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/trade_service.dart';
 import '../services/extension_service.dart';
 import '../services/collection_service.dart';
-import '../models/user_model.dart';
+import '../models/user_with_location.dart';
 import '../models/extension_model.dart';
 import '../widgets/card_tile_widget.dart';
 import 'trade_offer_screen.dart';
@@ -21,7 +21,7 @@ class _TradesScreenState extends State<TradesScreen> {
   final CollectionService _collectionService = CollectionService();
   
   final List<String> _selectedCards = [];
-  Map<String, List<UserModel>> _searchResults = {};
+  Map<String, List<UserWithLocation>> _searchResults = {};
   bool _isLoading = false;
   bool _isSearching = false;
   ExtensionModel? _currentExtension;
@@ -64,7 +64,7 @@ class _TradesScreenState extends State<TradesScreen> {
     });
 
     try {
-      final results = await _tradeService.findUsersWithCards(_selectedCards);
+      final results = await _tradeService.findUsersWithCardsAndLocation(_selectedCards);
       setState(() {
         _searchResults = results;
       });
@@ -403,7 +403,7 @@ class _TradesScreenState extends State<TradesScreen> {
     );
   }
 
-  Widget _buildUserTile(UserModel user, String cardName) {
+  Widget _buildUserTile(UserWithLocation user, String cardName) {
     final quantity = user.getCardQuantity(cardName);
     final timeAgo = _getTimeAgo(user.lastSeen);
     
@@ -436,6 +436,28 @@ class _TradesScreenState extends State<TradesScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                if (user.hasLocation)
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on, 
+                        size: 14, 
+                        color: Colors.blue.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          user.locationDisplay,
+                          style: TextStyle(
+                            color: Colors.blue.shade600,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 Text(
                   'Possède $quantity exemplaire${quantity > 1 ? 's' : ''}',
                   style: TextStyle(
@@ -458,7 +480,7 @@ class _TradesScreenState extends State<TradesScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => TradeOfferScreen(
-                    targetUser: user,
+                    targetUser: user.toUserModel(),
                     wantedCard: cardName,
                   ),
                 ),
