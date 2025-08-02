@@ -46,18 +46,21 @@ class _CollectionExtensionsScreenState extends State<CollectionExtensionsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75, // Ajusté pour les nouvelles dimensions fixes
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+          const SizedBox(height: 24),
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 800), // Limite la largeur sur grands écrans
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.65, // Ratio ajusté pour des cartes plus hautes
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                  ),
               itemCount: extensions.length,
               itemBuilder: (context, index) {
                 final extension = extensions[index];
@@ -76,7 +79,9 @@ class _CollectionExtensionsScreenState extends State<CollectionExtensionsScreen>
                 );
               },
             ),
-          ),
+                ),
+              ),
+            ),
           const SizedBox(height: 32),
         ],
       ),
@@ -101,18 +106,18 @@ class _ExtensionCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Image de l'extension (taille fixe comme Extensions)
+              // Image de l'extension (taille augmentée)
               Container(
-                height: 180, // Taille similaire aux vignettes d'extensions
+                height: 220, // Taille augmentée pour une meilleure visibilité
                 width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: const EdgeInsets.only(bottom: 12),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.asset(
@@ -124,7 +129,7 @@ class _ExtensionCard extends StatelessWidget {
                         child: Icon(
                           Icons.image_not_supported,
                           color: Colors.grey[400],
-                          size: 40,
+                          size: 50,
                         ),
                       );
                     },
@@ -132,9 +137,9 @@ class _ExtensionCard extends StatelessWidget {
                 ),
               ),
               
-              // Informations de l'extension (hauteur fixe)
+              // Informations de l'extension (hauteur ajustée)
               Container(
-                height: 80, // Hauteur fixe pour les informations
+                height: 90, // Hauteur légèrement augmentée
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -142,7 +147,7 @@ class _ExtensionCard extends StatelessWidget {
                     Text(
                       extension.name,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 16, // Taille de police augmentée
                         fontWeight: FontWeight.bold,
                         color: Colors.blue[700],
                       ),
@@ -150,33 +155,33 @@ class _ExtensionCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       extension.description,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 12, // Taille de police augmentée
                         color: Colors.grey[600],
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           '${extension.cardImages.length} cartes',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12, // Taille de police augmentée
                             fontWeight: FontWeight.w500,
                             color: Colors.grey[700],
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Icon(
                           Icons.arrow_forward_ios,
-                          size: 12,
+                          size: 14, // Icône plus grande
                           color: Colors.blue[400],
                         ),
                       ],
