@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
-import '../widgets/card_price_widget.dart';
 import 'extensions_screen.dart';
 import 'collection_extensions_screen.dart';
 import 'trades_screen.dart';
@@ -452,43 +451,6 @@ class _HomeTabState extends State<_HomeTab> {
                 ),
               ),
             ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Valeur de la collection
-          Card(
-            color: Colors.amber[50],
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.euro,
-                        size: 24,
-                        color: Colors.amber[700],
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Valeur de votre collection',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  CollectionValueWidget(
-                    collection: _collectionService.collection.collection,
-                  ),
-                ],
-              ),
-            ),
           ),
           
           const SizedBox(height: 24),

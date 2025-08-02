@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
 import '../services/extension_service.dart';
 import '../services/collection_service.dart';
-import '../services/price_service.dart';
-import '../widgets/card_price_widget.dart';
 
 class ExtensionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -26,8 +24,6 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
     super.initState();
     final extensionService = ExtensionService();
     cards = extensionService.getCardsForExtension(widget.extension.id);
-    // Initialiser les prix d'exemple
-    PriceService().initializeSamplePrices();
   }
 
   List<CardModel> get filteredCards {
@@ -96,7 +92,7 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16), // Padding symétrique
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3, // 3 cartes par ligne
-                    childAspectRatio: 0.6, // Ratio ajusté pour accommoder le prix
+                    childAspectRatio: 0.7, // Ratio ajusté après suppression du prix
                     crossAxisSpacing: 12, // Plus d'espacement pour centrer
                     mainAxisSpacing: 12,
                   ),
@@ -197,15 +193,6 @@ class _CardTileState extends State<_CardTile> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          
-          // Prix de la carte
-          Container(
-            height: 20,
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: CardPriceWidget(
-              cardId: widget.card.name,
             ),
           ),
           

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
 import '../services/extension_service.dart';
 import '../services/collection_service.dart';
-import '../services/price_service.dart';
-import '../widgets/card_price_widget.dart';
 
 class CollectionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -27,8 +25,6 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
     super.initState();
     final extensionService = ExtensionService();
     cards = extensionService.getCardsForExtension(widget.extension.id);
-    // Initialiser les prix d'exemple
-    PriceService().initializeSamplePrices();
   }
 
   List<CardModel> get filteredCards {
@@ -226,14 +222,6 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
             ),
           ),
           
-          // Prix de la carte
-          Container(
-            height: 20,
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: CardPriceWidget(
-              cardId: widget.card.name,
-            ),
-          ),
           
           // Contrôles de collection avec statut
           Container(
