@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/card_price_widget.dart';
