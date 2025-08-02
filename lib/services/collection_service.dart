@@ -52,6 +52,9 @@ class CollectionService {
 
   // Charger la collection depuis Firestore
   Future<void> loadCollection() async {
+    final user = _auth.currentUser;
+    debugPrint('🔄 loadCollection appelé pour utilisateur: ${user?.email ?? "non connecté"}');
+    
     await _testFirestoreConnection();
     
     if (!_isFirestoreAvailable) {
@@ -60,7 +63,6 @@ class CollectionService {
     }
 
     try {
-      final user = _auth.currentUser;
       if (user == null) {
         debugPrint('❌ Aucun utilisateur connecté');
         // Vider la collection locale si aucun utilisateur
@@ -81,6 +83,7 @@ class CollectionService {
         if (data != null && data['cards'] != null) {
           final cardsData = Map<String, int>.from(data['cards']);
           debugPrint('✅ Collection trouvée: ${cardsData.length} cartes');
+          debugPrint('🔍 Aperçu des cartes: ${cardsData.entries.take(5).map((e) => "${e.key}: ${e.value}").join(", ")}...');
           
           // Charger les données dans la collection locale
           _clearLocalCollection();
@@ -91,6 +94,7 @@ class CollectionService {
         }
       } else {
         debugPrint('📄 Nouveau utilisateur - collection vide');
+        _clearLocalCollection();
         _notifyCollectionChanged();
       }
       
@@ -120,19 +124,41 @@ class CollectionService {
           .collection('users')
           .doc(user.uid);
       
-      await userDoc.set({
+      // Pour éviter les problèmes avec les cartes supprimées, on remplace complètement le champ 'cards'
+      // au lieu d'utiliser merge: true
+      await userDoc.update({
         'cards': _collection.collection,
         'lastUpdated': FieldValue.serverTimestamp(),
-        'email': user.email,
-        'displayName': user.displayName,
-        'photoURL': user.photoURL,
         'lastSeen': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      });
       
       debugPrint('✅ Collection sauvegardée avec ${_collection.collection.length} cartes');
+      debugPrint('🔍 Cartes actuelles: ${_collection.collection.entries.where((e) => e.value > 0).take(3).map((e) => "${e.key}: ${e.value}").join(", ")}...');
       
     } catch (e) {
       debugPrint('❌ Erreur lors de la sauvegarde: $e');
+      // Si update échoue (document n'existe pas), créer le document
+      try {
+        final user = _auth.currentUser;
+        if (user == null) return;
+        
+        final userDoc = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid);
+        
+        await userDoc.set({
+          'cards': _collection.collection,
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'email': user.email,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
+          'lastSeen': FieldValue.serverTimestamp(),
+        });
+        
+        debugPrint('✅ Collection créée avec ${_collection.collection.length} cartes');
+      } catch (e2) {
+        debugPrint('❌ Erreur lors de la création du document: $e2');
+      }
     }
   }
 
@@ -162,7 +188,12 @@ class CollectionService {
 
   // Ajouter une carte
   Future<void> addCard(String cardName) async {
+    final oldQuantity = _collection.getCardQuantity(cardName);
     _collection.addCard(cardName);
+    final newQuantity = _collection.getCardQuantity(cardName);
+    
+    debugPrint('➕ Ajout carte: $cardName ($oldQuantity → $newQuantity)');
+    
     _notifyCardChanged(cardName);
     _notifyCollectionChanged();
     await _saveCollection();
@@ -170,7 +201,12 @@ class CollectionService {
 
   // Retirer une carte
   Future<void> removeCard(String cardName) async {
+    final oldQuantity = _collection.getCardQuantity(cardName);
     _collection.removeCard(cardName);
+    final newQuantity = _collection.getCardQuantity(cardName);
+    
+    debugPrint('➖ Retrait carte: $cardName ($oldQuantity → $newQuantity)');
+    
     _notifyCardChanged(cardName);
     _notifyCollectionChanged();
     await _saveCollection();
@@ -178,7 +214,11 @@ class CollectionService {
 
   // Définir la quantité d'une carte
   Future<void> setCardQuantity(String cardName, int quantity) async {
+    final oldQuantity = _collection.getCardQuantity(cardName);
     _collection.setCardQuantity(cardName, quantity);
+    
+    debugPrint('🔢 Quantité carte: $cardName ($oldQuantity → $quantity)');
+    
     _notifyCardChanged(cardName);
     _notifyCollectionChanged();
     await _saveCollection();

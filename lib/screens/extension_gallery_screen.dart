@@ -212,6 +212,7 @@ class _CardTileState extends State<_CardTile> {
                       height: 28,
                       child: ElevatedButton(
                         onPressed: quantity > 0 ? () {
+                          print('🔽 UI: Retrait de ${widget.card.name}, quantité actuelle: $quantity');
                           _collectionService.removeCard(widget.card.name);
                         } : null,
                         style: ElevatedButton.styleFrom(
@@ -257,6 +258,7 @@ class _CardTileState extends State<_CardTile> {
                       height: 28,
                       child: ElevatedButton(
                         onPressed: () {
+                          print('🔼 UI: Ajout de ${widget.card.name}, quantité actuelle: $quantity');
                           _collectionService.addCard(widget.card.name);
                         },
                         style: ElevatedButton.styleFrom(
@@ -305,8 +307,8 @@ class _CardModalState extends State<_CardModal> {
     super.initState();
     currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    // Charger la collection au démarrage
-    _collectionService.loadCollection();
+    // NOTE: Ne pas recharger la collection ici car cela écrase les modifications locales
+    // La collection est déjà chargée dans HomeScreen
   }
 
   @override

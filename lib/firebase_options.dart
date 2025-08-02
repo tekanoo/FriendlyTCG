@@ -26,7 +26,7 @@ class DefaultFirebaseOptions {
     appId: '1:577013453059:web:860fe452da1095f6399936',
     messagingSenderId: '577013453059',
     projectId: 'friendlytcg-35fba',
-    authDomain: 'friendlytcg-35fba.firebaseapp.com',
+    authDomain: 'friendly-tcg.com',
     storageBucket: 'friendlytcg-35fba.firebasestorage.app',
     measurementId: 'G-LBVM1XQZC9',
   );

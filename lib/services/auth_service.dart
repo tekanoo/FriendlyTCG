@@ -25,6 +25,11 @@ class AuthService {
   // Connexion avec Google - Version simplifiée pour le web
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      debugPrint('🔗 URL actuelle: ${Uri.base}');
+      debugPrint('🔗 Host: ${Uri.base.host}');
+      debugPrint('🔗 Port: ${Uri.base.port}');
+      debugPrint('🔗 Scheme: ${Uri.base.scheme}');
+      
       // Créer un provider Google
       GoogleAuthProvider googleProvider = GoogleAuthProvider();
       
@@ -48,6 +53,14 @@ class AuthService {
           return result;
         } catch (popupError) {
           debugPrint('Erreur popup: $popupError');
+          debugPrint('Type d\'erreur: ${popupError.runtimeType}');
+          
+          // Log spécifique pour redirect_uri_mismatch
+          if (popupError.toString().contains('redirect_uri_mismatch')) {
+            debugPrint('❌ ERREUR REDIRECT_URI_MISMATCH détectée!');
+            debugPrint('🔧 Vérifiez la configuration OAuth dans Google Cloud Console');
+            debugPrint('📍 URL actuelle à autoriser: ${Uri.base.scheme}://${Uri.base.host}${Uri.base.port != 80 && Uri.base.port != 443 ? ':${Uri.base.port}' : ''}/__/auth/handler');
+          }
           // Fallback vers redirect si popup échoue
           debugPrint('Fallback vers redirect...');
           await _firebaseAuth.signInWithRedirect(googleProvider);

@@ -16,19 +16,27 @@ class CardCollection {
     int currentQuantity = _collection[cardName] ?? 0;
     int newQuantity = currentQuantity - quantity;
     
+    print('🔄 removeCard: $cardName, quantité actuelle: $currentQuantity, retrait: $quantity, nouvelle quantité: $newQuantity');
+    
     if (newQuantity <= 0) {
       _collection.remove(cardName);
+      print('🗑️ Carte supprimée de la collection: $cardName');
     } else {
       _collection[cardName] = newQuantity;
+      print('📝 Quantité mise à jour: $cardName = $newQuantity');
     }
   }
 
   // Définir une quantité spécifique
   void setCardQuantity(String cardName, int quantity) {
+    print('🔄 setCardQuantity: $cardName = $quantity');
+    
     if (quantity <= 0) {
       _collection.remove(cardName);
+      print('🗑️ Carte supprimée (quantité = 0): $cardName');
     } else {
       _collection[cardName] = quantity;
+      print('📝 Quantité définie: $cardName = $quantity');
     }
   }
 

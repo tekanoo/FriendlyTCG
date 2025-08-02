@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test OAuth Redirect URIs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #ffebee; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .copy-btn { background: #1976d2; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test Configuration OAuth - Friendly TCG</h1>
+    
+    <div class="info">
+        <h3>📍 Informations de l'URL Actuelle</h3>
+        <p><strong>URL Complète:</strong> <span id="fullUrl"></span></p>
+        <p><strong>Protocol:</strong> <span id="protocol"></span></p>
+        <p><strong>Host:</strong> <span id="host"></span></p>
+        <p><strong>Port:</strong> <span id="port"></span></p>
+        <p><strong>Origin:</strong> <span id="origin"></span></p>
+    </div>
+
+    <div class="success">
+        <h3>✅ URLs à Ajouter dans Google Cloud Console</h3>
+        
+        <h4>Authorized JavaScript Origins:</h4>
+        <pre id="jsOrigins"></pre>
+        <button class="copy-btn" onclick="copyToClipboard('jsOrigins')">Copier</button>
+        
+        <h4>Authorized Redirect URIs:</h4>
+        <pre id="redirectUris"></pre>
+        <button class="copy-btn" onclick="copyToClipboard('redirectUris')">Copier</button>
+    </div>
+
+    <div class="info">
+        <h3>🔗 Liens Rapides</h3>
+        <p><a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console - Credentials</a></p>
+        <p><a href="https://console.firebase.google.com/project/friendlytcg-35fba/authentication/settings" target="_blank">Firebase Console - Authentication Settings</a></p>
+    </div>
+
+    <script>
+        // Récupérer les informations de l'URL
+        const url = new URL(window.location.href);
+        
+        document.getElementById('fullUrl').textContent = window.location.href;
+        document.getElementById('protocol').textContent = url.protocol;
+        document.getElementById('host').textContent = url.hostname;
+        document.getElementById('port').textContent = url.port || (url.protocol === 'https:' ? '443' : '80');
+        document.getElementById('origin').textContent = window.location.origin;
+
+        // Générer les URLs à configurer
+        const origin = window.location.origin;
+        const authHandler = origin + '/__/auth/handler';
+
+        // JavaScript Origins (ajouter des variations communes)
+        const jsOrigins = [
+            origin,
+            'https://friendly-tcg.com',
+            'https://friendlytcg-35fba.firebaseapp.com',
+            'http://localhost',
+            'http://localhost:5000',
+            'http://localhost:8080',
+            'http://127.0.0.1',
+            'http://127.0.0.1:5000',
+            'http://127.0.0.1:8080'
+        ];
+
+        // Redirect URIs
+        const redirectUris = [
+            authHandler,
+            'https://friendly-tcg.com/__/auth/handler',
+            'https://friendlytcg-35fba.firebaseapp.com/__/auth/handler',
+            'http://localhost/__/auth/handler',
+            'http://localhost:5000/__/auth/handler',
+            'http://localhost:8080/__/auth/handler',
+            'http://127.0.0.1/__/auth/handler',
+            'http://127.0.0.1:5000/__/auth/handler',
+            'http://127.0.0.1:8080/__/auth/handler'
+        ];
+
+        // Afficher les URLs
+        document.getElementById('jsOrigins').textContent = jsOrigins.join('\n');
+        document.getElementById('redirectUris').textContent = redirectUris.join('\n');
+
+        // Fonction pour copier dans le presse-papier
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copié dans le presse-papier !');
+            }).catch(err => {
+                console.error('Erreur de copie:', err);
+                // Fallback pour les navigateurs plus anciens
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Copié dans le presse-papier !');
+            });
+        }
+
+        // Mettre en évidence l'URL actuelle
+        console.log('🔧 Configuration OAuth pour:', origin);
+        console.log('📍 Redirect URI:', authHandler);
+    </script>
+</body>
+</html>
