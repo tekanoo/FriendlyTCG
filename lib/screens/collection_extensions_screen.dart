@@ -54,7 +54,7 @@ class _CollectionExtensionsScreenState extends State<CollectionExtensionsScreen>
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.6, // Ajusté pour accommoder l'image
+                childAspectRatio: 0.75, // Ajusté pour les nouvelles dimensions fixes
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
@@ -108,35 +108,34 @@ class _ExtensionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Image de l'extension
-              Expanded(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      extension.imagePath,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[200],
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 40,
-                          ),
-                        );
-                      },
-                    ),
+              // Image de l'extension (taille fixe comme Extensions)
+              Container(
+                height: 180, // Taille similaire aux vignettes d'extensions
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    extension.imagePath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey[400],
+                          size: 40,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
               
-              // Informations de l'extension
-              Expanded(
-                flex: 1,
+              // Informations de l'extension (hauteur fixe)
+              Container(
+                height: 80, // Hauteur fixe pour les informations
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
