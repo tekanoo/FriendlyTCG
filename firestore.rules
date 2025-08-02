@@ -18,10 +18,6 @@ service cloud.firestore {
       // Création : Autorisée pour tout utilisateur connecté
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.fromUserId;
-      // Suppression : Autorisée pour les participants de l'échange
-      allow delete: if request.auth != null && 
-        (request.auth.uid == resource.data.fromUserId || 
-         request.auth.uid == resource.data.toUserId);
     }
     
     // Règles pour les messages d'échange
@@ -37,9 +33,6 @@ service cloud.firestore {
         (request.auth.uid == get(/databases/$(database)/documents/trades/$(request.resource.data.tradeId)).data.fromUserId ||
          request.auth.uid == get(/databases/$(database)/documents/trades/$(request.resource.data.tradeId)).data.toUserId) &&
         request.auth.uid == request.resource.data.senderId;
-      // Suppression : Autorisée pour l'expéditeur du message ou lors de la suppression du compte
-      allow delete: if request.auth != null && 
-        request.auth.uid == resource.data.senderId;
     }
     
     // Collection de test pour vérifier la connexion
