@@ -9,6 +9,32 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Règles pour les échanges
+    match /trades/{tradeId} {
+      // Lecture et écriture : Autorisés pour les participants de l'échange
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+      // Création : Autorisée pour tout utilisateur connecté
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.fromUserId;
+    }
+    
+    // Règles pour les messages d'échange
+    match /trade_messages/{messageId} {
+      // Lecture : Autorisée pour les participants de l'échange correspondant
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/trades/$(resource.data.tradeId)) &&
+        (request.auth.uid == get(/databases/$(database)/documents/trades/$(resource.data.tradeId)).data.fromUserId ||
+         request.auth.uid == get(/databases/$(database)/documents/trades/$(resource.data.tradeId)).data.toUserId);
+      // Création : Autorisée pour les participants de l'échange
+      allow create: if request.auth != null && 
+        exists(/databases/$(database)/documents/trades/$(request.resource.data.tradeId)) &&
+        (request.auth.uid == get(/databases/$(database)/documents/trades/$(request.resource.data.tradeId)).data.fromUserId ||
+         request.auth.uid == get(/databases/$(database)/documents/trades/$(request.resource.data.tradeId)).data.toUserId) &&
+        request.auth.uid == request.resource.data.senderId;
+    }
+    
     // Collection de test pour vérifier la connexion
     match /test/{document} {
       allow read, write: if request.auth != null;

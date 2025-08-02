@@ -4,7 +4,7 @@ import '../services/auth_service.dart';
 import '../services/collection_service.dart';
 import 'extensions_screen.dart';
 import 'collection_extensions_screen.dart';
-import 'trades_screen.dart';
+import 'trades_main_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               // Onglet Collection
               const CollectionExtensionsScreen(),
               // Onglet Échanges
-              const TradesScreen(),
+              const TradesMainScreen(),
             ],
           ),
           // Version en bas à droite

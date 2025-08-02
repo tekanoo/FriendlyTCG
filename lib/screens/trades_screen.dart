@@ -4,6 +4,8 @@ import '../services/extension_service.dart';
 import '../models/user_model.dart';
 import '../models/extension_model.dart';
 import '../widgets/card_tile_widget.dart';
+import 'trade_offer_screen.dart';
+import 'my_trades_screen.dart';
 
 class TradesScreen extends StatefulWidget {
   const TradesScreen({super.key});
@@ -135,13 +137,29 @@ class _TradesScreenState extends State<TradesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Échanges de cartes',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Échanges de cartes',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const MyTradesScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.list, color: Colors.white),
+                tooltip: 'Mes échanges',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -335,15 +353,17 @@ class _TradesScreenState extends State<TradesScreen> {
           ),
           IconButton(
             onPressed: () {
-              //TODO: Implémenter l'envoi de message
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fonctionnalité de message à venir'),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TradeOfferScreen(
+                    targetUser: user,
+                    wantedCard: cardName,
+                  ),
                 ),
               );
             },
-            icon: const Icon(Icons.message),
-            tooltip: 'Envoyer un message',
+            icon: const Icon(Icons.swap_horiz),
+            tooltip: 'Proposer un échange',
           ),
         ],
       ),
