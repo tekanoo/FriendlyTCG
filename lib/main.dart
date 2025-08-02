@@ -15,24 +15,33 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     
-    // Initialisation explicite de Firestore pour le web
+    debugPrint('✅ Firebase initialisé avec succès');
+    
+    // Initialisation Firestore séparée pour le web
     if (kIsWeb) {
-      FirebaseFirestore.instance.settings = const Settings(
-        persistenceEnabled: false,
-      );
+      try {
+        // Configuration spécifique pour le web avec la base par défaut
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: false,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        
+        // Test de connexion initial
+        await FirebaseFirestore.instance.disableNetwork();
+        await FirebaseFirestore.instance.enableNetwork();
+        
+        debugPrint('🔗 Firestore configuré pour le web avec base par défaut');
+      } catch (firestoreError) {
+        debugPrint('⚠️ Erreur configuration Firestore: $firestoreError');
+        // Continue même si Firestore échoue
+      }
     }
     
-    debugPrint('✅ Firebase et Firestore initialisés avec succès');
     runApp(const MyApp());
   } catch (e) {
     debugPrint('❌ Erreur lors de l\'initialisation de Firebase: $e');
-    runApp(const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Erreur lors de l\'initialisation de Firebase'),
-        ),
-      ),
-    ));
+    // Essayons de continuer sans Firestore
+    runApp(const MyApp());
   }
 }
 

@@ -38,19 +38,51 @@ class CollectionService {
   Future<bool> _testFirestoreConnection() async {
     try {
       debugPrint('🔍 Test de connexion Firestore...');
-      await _firestore.enableNetwork();
       
-      // Test simple d'écriture/lecture
+      // Configuration progressive pour le web
+      if (kIsWeb) {
+        try {
+          debugPrint('🌐 Configuration Web détectée');
+          
+          // Test de connexion simple d'abord
+          final testRef = _firestore.collection('test').doc('simple');
+          debugPrint('📄 Référence de test créée: ${testRef.path}');
+          
+          // Essayons d'abord enableNetwork
+          await _firestore.enableNetwork();
+          debugPrint('🔗 EnableNetwork réussi');
+          
+          // Délai pour stabiliser la connexion
+          await Future.delayed(const Duration(milliseconds: 2000));
+          debugPrint('⏱️ Délai d\'attente terminé');
+          
+        } catch (e) {
+          debugPrint('⚠️ Erreur enableNetwork: $e');
+          // Continue quand même pour tester
+        }
+      }
+      
+      // Test simple sans timeout au début
+      debugPrint('📝 Tentative d\'écriture dans Firestore...');
       final testDoc = _firestore.collection('test').doc('connection');
       await testDoc.set({'timestamp': FieldValue.serverTimestamp()});
+      debugPrint('✅ Écriture réussie');
+      
+      debugPrint('📖 Tentative de lecture...');
       await testDoc.get();
+      debugPrint('✅ Lecture réussie');
+      
+      debugPrint('🗑️ Tentative de suppression...');
       await testDoc.delete();
+      debugPrint('✅ Suppression réussie');
       
       debugPrint('✅ Connexion Firestore réussie');
       _isFirestoreAvailable = true;
       return true;
     } catch (e) {
       debugPrint('❌ Test de connexion Firestore échoué: $e');
+      debugPrint('🔍 Type d\'erreur: ${e.runtimeType}');
+      debugPrint('📋 Stack trace: ${StackTrace.current}');
       _isFirestoreAvailable = false;
       return false;
     }
@@ -60,6 +92,14 @@ class CollectionService {
   Future<void> loadCollection() async {
     try {
       print('=== DEBUG: Début du chargement de la collection ===');
+      
+      // Test de connexion d'abord
+      final isConnected = await _testFirestoreConnection();
+      if (!isConnected) {
+        print('DEBUG: Firestore non disponible, utilisation du mode local uniquement');
+        return;
+      }
+      
       final userDoc = _userDocRef;
       if (userDoc == null) {
         print('DEBUG: Aucun utilisateur connecté, impossible de charger');
@@ -67,12 +107,6 @@ class CollectionService {
       }
 
       print('DEBUG: Chargement depuis: ${userDoc.path}');
-      
-      // Test de connexion Firestore d'abord
-      final isConnected = await _testFirestoreConnection();
-      if (!isConnected) {
-        return;
-      }
       
       // Attendre un peu pour que Firestore soit prêt
       await Future.delayed(const Duration(milliseconds: 500));
