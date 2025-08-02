@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/collection_service.dart';
 import 'extensions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -111,13 +112,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 }
 
 // Widget pour l'onglet Accueil
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends StatefulWidget {
   final User? user;
 
   const _HomeTab({required this.user});
 
   @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  final CollectionService _collectionService = CollectionService();
+
+  @override
   Widget build(BuildContext context) {
+    final totalCardsCollected = _collectionService.collection.totalCards;
+    final uniqueCardsCollected = _collectionService.collection.totalUniqueCards;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -138,11 +148,11 @@ class _HomeTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (user?.photoURL != null)
+                  if (widget.user?.photoURL != null)
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundImage: NetworkImage(user!.photoURL!),
+                          backgroundImage: NetworkImage(widget.user!.photoURL!),
                           radius: 30,
                         ),
                         const SizedBox(width: 16),
@@ -151,14 +161,14 @@ class _HomeTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                user!.displayName ?? 'Nom non disponible',
+                                widget.user!.displayName ?? 'Nom non disponible',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                               Text(
-                                user!.email ?? 'Email non disponible',
+                                widget.user!.email ?? 'Email non disponible',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey,
@@ -174,12 +184,12 @@ class _HomeTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Nom: ${user?.displayName ?? 'Non disponible'}',
+                          'Nom: ${widget.user?.displayName ?? 'Non disponible'}',
                           style: const TextStyle(fontSize: 16),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Email: ${user?.email ?? 'Non disponible'}',
+                          'Email: ${widget.user?.email ?? 'Non disponible'}',
                           style: const TextStyle(fontSize: 16),
                         ),
                       ],
@@ -199,6 +209,81 @@ class _HomeTab extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Card(
+                  color: Colors.green[50],
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.collections,
+                          size: 32,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Cartes collectées',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          totalCardsCollected.toString(),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  color: Colors.blue[50],
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          size: 32,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Cartes uniques',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          uniqueCardsCollected.toString(),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
           const SizedBox(height: 16),
           Row(
             children: [
@@ -239,31 +324,31 @@ class _HomeTab extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Card(
-                  color: Colors.blue[50],
-                  child: const Padding(
-                    padding: EdgeInsets.all(16.0),
+                  color: Colors.purple[50],
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.collections,
+                        const Icon(
+                          Icons.percent,
                           size: 32,
-                          color: Colors.blue,
+                          color: Colors.purple,
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Cartes totales',
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Progression',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.blue,
+                            color: Colors.purple,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          '220',
-                          style: TextStyle(
+                          '${uniqueCardsCollected > 0 ? ((uniqueCardsCollected / 220) * 100).toStringAsFixed(1) : '0.0'}%',
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue,
+                            color: Colors.purple,
                           ),
                         ),
                       ],

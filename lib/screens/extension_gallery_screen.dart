@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
 import '../services/extension_service.dart';
+import '../services/collection_service.dart';
 
 class ExtensionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -82,24 +83,29 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
             ),
           ),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: filteredCards.length,
-              itemBuilder: (context, index) {
-                final card = filteredCards[index];
-                return _CardTile(
-                  card: card,
-                  onTap: () {
-                    _showCardModal(context, card, filteredCards, index);
+            child: Center( // Centrer le contenu
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200), // Largeur max pour grands écrans
+                child: GridView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16), // Padding symétrique
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3, // 3 cartes par ligne
+                    childAspectRatio: 0.65, // Ratio ajusté pour de meilleures proportions
+                    crossAxisSpacing: 12, // Plus d'espacement pour centrer
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: filteredCards.length,
+                  itemBuilder: (context, index) {
+                    final card = filteredCards[index];
+                    return _CardTile(
+                      card: card,
+                      onTap: () {
+                        _showCardModal(context, card, filteredCards, index);
+                      },
+                    );
                   },
-                );
-              },
+                ),
+              ),
             ),
           ),
         ],
@@ -118,7 +124,7 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   }
 }
 
-class _CardTile extends StatelessWidget {
+class _CardTile extends StatefulWidget {
   final CardModel card;
   final VoidCallback onTap;
 
@@ -128,44 +134,146 @@ class _CardTile extends StatelessWidget {
   });
 
   @override
+  State<_CardTile> createState() => _CardTileState();
+}
+
+class _CardTileState extends State<_CardTile> {
+  final CollectionService _collectionService = CollectionService();
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        elevation: 2,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                child: Image.asset(
-                  card.imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
+    final int quantity = _collectionService.getCardQuantity(widget.card.name);
+
+    return Card(
+      elevation: 2, // Ombre plus marquée
+      margin: const EdgeInsets.all(2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Image de la carte (cliquable)
+          Expanded(
+            flex: 5, // Plus d'espace pour l'image
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: Container(
+                margin: const EdgeInsets.all(4), // Marge un peu plus grande
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6), // Coins plus arrondis
+                  child: Image.asset(
+                    widget.card.imagePath,
+                    fit: BoxFit.contain, // Voir l'image entière
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Text(
-                card.displayName,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+          ),
+          
+          // Nom de la carte
+          Container(
+            height: 32, // Hauteur un peu plus grande
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+            child: Text(
+              widget.card.displayName,
+              style: const TextStyle(
+                fontSize: 11, // Texte un peu plus grand
+                fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
+          ),
+          
+          // Contrôles de collection
+          Container(
+            height: 36, // Hauteur plus confortable
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Bouton -
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: quantity > 0 ? () {
+                      setState(() {
+                        _collectionService.removeCard(widget.card.name);
+                      });
+                    } : null,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      backgroundColor: Colors.red[100],
+                      foregroundColor: Colors.red[700],
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    child: const Icon(Icons.remove, size: 16),
+                  ),
+                ),
+                
+                // Quantité
+                Container(
+                  width: 32,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: quantity > 0 ? Colors.green[50] : Colors.grey[100],
+                    border: Border.all(
+                      color: quantity > 0 ? Colors.green : Colors.grey,
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Center(
+                    child: Text(
+                      quantity.toString(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: quantity > 0 ? Colors.green[700] : Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Bouton +
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _collectionService.addCard(widget.card.name);
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      backgroundColor: Colors.green[100],
+                      foregroundColor: Colors.green[700],
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    child: const Icon(Icons.add, size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

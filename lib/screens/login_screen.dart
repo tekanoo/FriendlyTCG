@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 
@@ -12,6 +13,19 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCurrentUser();
+  }
+
+  void _checkCurrentUser() {
+    final user = _authService.currentUser;
+    debugPrint('=== LoginScreen: Vérification utilisateur actuel ===');
+    debugPrint('LoginScreen: User actuel: ${user?.email ?? 'null'}');
+    // Suppression de la navigation automatique - laissons l'AuthWrapper gérer
+  }
 
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return; // Éviter les clics multiples
@@ -164,6 +178,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
               ),
+              
+              const SizedBox(height: 20),
+              
+              // Bouton de debug temporaire
+              if (kDebugMode)
+                ElevatedButton(
+                  onPressed: () {
+                    final user = _authService.currentUser;
+                    debugPrint('=== DEBUG: État actuel ===');
+                    debugPrint('User: ${user?.email ?? 'null'}');
+                    debugPrint('IsSignedIn: ${_authService.isSignedIn}');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('User: ${user?.email ?? 'null'} - SignedIn: ${_authService.isSignedIn}'),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                    if (user != null) {
+                      Navigator.of(context).pushReplacementNamed('/home');
+                    }
+                  },
+                  child: const Text('Debug: Vérifier état'),
+                ),
               
               const SizedBox(height: 40),
               

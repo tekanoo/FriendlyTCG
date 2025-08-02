@@ -8,7 +8,18 @@ class AuthService {
   User? get currentUser => _firebaseAuth.currentUser;
 
   // Stream pour écouter les changements d'état d'authentification
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+  Stream<User?> get authStateChanges {
+    return _firebaseAuth.authStateChanges().map((User? user) {
+      debugPrint('=== AuthService: Changement d\'état d\'authentification ===');
+      if (user != null) {
+        debugPrint('AuthService: Utilisateur connecté: ${user.email}');
+        debugPrint('AuthService: UID: ${user.uid}');
+      } else {
+        debugPrint('AuthService: Aucun utilisateur connecté');
+      }
+      return user;
+    });
+  }
 
   // Connexion avec Google - Version simplifiée pour le web
   Future<UserCredential?> signInWithGoogle() async {
@@ -70,16 +81,19 @@ class AuthService {
   // Vérifier s'il y a un résultat de redirection en attente
   Future<UserCredential?> checkRedirectResult() async {
     try {
-      debugPrint('Vérification du résultat de redirection...');
+      debugPrint('=== AuthService: Vérification du résultat de redirection ===');
       final result = await _firebaseAuth.getRedirectResult();
       if (result.user != null) {
-        debugPrint('Utilisateur connecté via redirect: ${result.user?.email}');
+        debugPrint('AuthService: Utilisateur connecté via redirect: ${result.user?.email}');
+        debugPrint('AuthService: User UID: ${result.user?.uid}');
+        debugPrint('AuthService: User displayName: ${result.user?.displayName}');
         return result;
+      } else {
+        debugPrint('AuthService: Aucun résultat de redirection (result.user est null)');
       }
-      debugPrint('Aucun résultat de redirection');
       return null;
     } catch (e) {
-      debugPrint('Erreur lors de la vérification du redirect: $e');
+      debugPrint('AuthService: Erreur lors de la vérification du redirect: $e');
       return null;
     }
   }
