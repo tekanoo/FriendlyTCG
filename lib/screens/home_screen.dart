@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/card_price_widget.dart';
 import 'extensions_screen.dart';
+import 'collection_extensions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -107,8 +108,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               _HomeTab(user: user),
               // Onglet Extensions
               const ExtensionsScreen(),
-              // Onglet Collection (pour plus tard)
-              _CollectionTab(),
+              // Onglet Collection
+              const CollectionExtensionsScreen(),
             ],
           ),
           // Version en bas à droite
@@ -499,41 +500,6 @@ class _HomeTabState extends State<_HomeTab> {
           const Text(
             'Explorez les extensions disponibles pour découvrir toutes les cartes NewType Risings.',
             style: TextStyle(fontSize: 16),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Widget pour l'onglet Collection (temporaire)
-class _CollectionTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.collections,
-            size: 64,
-            color: Colors.grey,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Ma Collection',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Fonctionnalité à venir !',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
           ),
         ],
       ),
