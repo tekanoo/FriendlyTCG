@@ -49,39 +49,32 @@ class _CollectionExtensionsScreenState extends State<CollectionExtensionsScreen>
           const SizedBox(height: 24),
           Center(
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 800), // Limite la largeur sur grands écrans
+              constraints: const BoxConstraints(maxWidth: 1000),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.65, // Ratio ajusté pour des cartes plus hautes
-                    crossAxisSpacing: 20,
-                    mainAxisSpacing: 20,
-                  ),
-              itemCount: extensions.length,
-              itemBuilder: (context, index) {
-                final extension = extensions[index];
-                return _ExtensionCard(
-                  extension: extension,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CollectionGalleryScreen(
-                          extension: extension,
-                        ),
-                      ),
+                child: Wrap(
+                  spacing: 20,
+                  runSpacing: 20,
+                  alignment: WrapAlignment.center,
+                  children: extensions.map((extension) {
+                    return _ExtensionCard(
+                      extension: extension,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CollectionGalleryScreen(
+                              extension: extension,
+                            ),
+                          ),
+                        );
+                      },
                     );
-                  },
-                );
-              },
-            ),
+                  }).toList(),
                 ),
               ),
             ),
+          ),
           const SizedBox(height: 32),
         ],
       ),
@@ -100,98 +93,55 @@ class _ExtensionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Image de l'extension (taille native, comme dans Extensions)
+          Image.asset(
+            extension.imagePath,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 200,
+                height: 300,
+                color: Colors.grey[200],
+                child: const Icon(
+                  Icons.image_not_supported,
+                  size: 50,
+                  color: Colors.grey,
+                ),
+              );
+            },
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Image de l'extension (taille augmentée)
-              Container(
-                height: 220, // Taille augmentée pour une meilleure visibilité
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    extension.imagePath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[200],
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey[400],
-                          size: 50,
-                        ),
-                      );
-                    },
+          const SizedBox(height: 8),
+          // Informations de l'extension
+          Container(
+            constraints: const BoxConstraints(maxWidth: 200),
+            child: Column(
+              children: [
+                Text(
+                  extension.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              
-              // Informations de l'extension (hauteur ajustée)
-              Container(
-                height: 90, // Hauteur légèrement augmentée
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      extension.name,
-                      style: TextStyle(
-                        fontSize: 16, // Taille de police augmentée
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[700],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      extension.description,
-                      style: TextStyle(
-                        fontSize: 12, // Taille de police augmentée
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${extension.cardImages.length} cartes',
-                          style: TextStyle(
-                            fontSize: 12, // Taille de police augmentée
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14, // Icône plus grande
-                          color: Colors.blue[400],
-                        ),
-                      ],
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  '${extension.cardImages.length} cartes',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
