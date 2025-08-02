@@ -25,7 +25,6 @@ class GeneratedCardsList {
       'GD01-011.png',
       'GD01-012.png',
       'GD01-013.png',
-      'GD01-013_Variante_P2.png',
       'GD01-014.png',
       'GD01-015.png',
       'GD01-016.png',
