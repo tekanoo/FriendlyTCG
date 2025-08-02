@@ -143,9 +143,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<String> _getAppVersion() async {
     try {
       // Pour le web, on retourne la version depuis pubspec.yaml
-      return "1.0.7";
+      return "1.1.0";
     } catch (e) {
-      return "1.0.7";
+      return "1.1.0";
     }
   }
 }

@@ -23,9 +23,9 @@ class CollectionService {
     try {
       debugPrint('🔍 Test de connexion Firestore simple...');
       
-      // Test ultra basique - juste vérifier si l'instance existe
-      FirebaseFirestore.instance;
-      debugPrint('✅ Instance Firestore accessible');
+      // Test ultra basique - juste vérifier si Firestore répond
+      final testCollection = FirebaseFirestore.instance.collection('test');
+      debugPrint('✅ Instance Firestore créée');
       
       _isFirestoreAvailable = true;
       debugPrint('✅ Firestore marqué comme disponible');
@@ -131,17 +131,6 @@ class CollectionService {
   // Définir la quantité d'une carte
   Future<void> setCardQuantity(String cardName, int quantity) async {
     _collection.setCardQuantity(cardName, quantity);
-    await _saveCollection();
-  }
-
-  // Obtenir la quantité d'une carte
-  int getCardQuantity(String cardName) {
-    return _collection.getCardQuantity(cardName);
-  }
-
-  // Vider toute la collection
-  Future<void> clearCollection() async {
-    _clearLocalCollection();
     await _saveCollection();
   }
 }
