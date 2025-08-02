@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
 import '../services/extension_service.dart';
 import '../services/collection_service.dart';
+import '../widgets/pagination_controls.dart';
 
 class ExtensionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -18,6 +19,8 @@ class ExtensionGalleryScreen extends StatefulWidget {
 class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   late List<CardModel> cards;
   String searchQuery = '';
+  int currentPage = 0;
+  static const int cardsPerPage = 9; // 3x3 grille
 
   @override
   void initState() {
@@ -33,6 +36,42 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
     ).toList();
   }
 
+  List<CardModel> get currentPageCards {
+    final allCards = filteredCards;
+    final startIndex = currentPage * cardsPerPage;
+    final endIndex = (startIndex + cardsPerPage).clamp(0, allCards.length);
+    
+    if (startIndex >= allCards.length) return [];
+    return allCards.sublist(startIndex, endIndex);
+  }
+
+  int get totalPages {
+    return (filteredCards.length / cardsPerPage).ceil();
+  }
+
+  void _goToNextPage() {
+    if (currentPage < totalPages - 1) {
+      setState(() {
+        currentPage++;
+      });
+    }
+  }
+
+  void _goToPreviousPage() {
+    if (currentPage > 0) {
+      setState(() {
+        currentPage--;
+      });
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      searchQuery = value;
+      currentPage = 0; // Reset à la première page lors de la recherche
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,9 +84,7 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                });
+                _onSearchChanged(value);
               },
               decoration: InputDecoration(
                 hintText: 'Rechercher une carte...',
@@ -62,55 +99,55 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${filteredCards.length} cartes',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    widget.extension.description,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Center( // Centrer le contenu
+      body: Column(
+        children: [
+          // Header avec informations et pagination
+          PageHeader(
+            totalItems: filteredCards.length,
+            currentPage: currentPage,
+            totalPages: totalPages,
+            itemName: 'cartes',
+            subtitle: widget.extension.description,
+          ),
+          
+          // Grille de cartes (fixe 3x3)
+          Expanded(
+            child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200), // Largeur max pour grands écrans
+                constraints: const BoxConstraints(maxWidth: 1200),
                 child: GridView.builder(
-                  shrinkWrap: true, // Important pour le défilement global
-                  physics: const NeverScrollableScrollPhysics(), // Désactiver le défilement de la grille
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16), // Padding symétrique
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, // 3 cartes par ligne
-                    childAspectRatio: 0.7, // Ratio ajusté après suppression du prix
-                    crossAxisSpacing: 12, // Plus d'espacement pour centrer
+                    crossAxisCount: 3, // 3 colonnes
+                    childAspectRatio: 0.7,
+                    crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  itemCount: filteredCards.length,
+                  itemCount: currentPageCards.length,
                   itemBuilder: (context, index) {
-                    final card = filteredCards[index];
+                    final card = currentPageCards[index];
                     return _CardTile(
                       card: card,
                       onTap: () {
-                        _showCardModal(context, card, filteredCards, index);
+                        _showCardModal(context, card, filteredCards, 
+                            filteredCards.indexOf(card));
                       },
                     );
                   },
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          
+          // Contrôles de pagination
+          PaginationControls(
+            currentPage: currentPage,
+            totalPages: totalPages,
+            onPreviousPage: _goToPreviousPage,
+            onNextPage: _goToNextPage,
+            primaryColor: Colors.blue,
+          ),
+        ],
       ),
     );
   }
