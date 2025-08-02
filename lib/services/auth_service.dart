@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'collection_service.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -101,6 +102,10 @@ class AuthService {
   // Déconnexion simplifiée
   Future<void> signOut() async {
     try {
+      // Vider la collection avant de se déconnecter
+      final collectionService = CollectionService();
+      collectionService.clearCollection();
+      
       await _firebaseAuth.signOut();
     } catch (e) {
       debugPrint('Erreur déconnexion: $e');

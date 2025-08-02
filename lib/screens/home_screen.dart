@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
 import 'extensions_screen.dart';
@@ -96,18 +97,56 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Stack(
         children: [
-          // Onglet Accueil
-          _HomeTab(user: user),
-          // Onglet Extensions
-          const ExtensionsScreen(),
-          // Onglet Collection (pour plus tard)
-          _CollectionTab(),
+          TabBarView(
+            controller: _tabController,
+            children: [
+              // Onglet Accueil
+              _HomeTab(user: user),
+              // Onglet Extensions
+              const ExtensionsScreen(),
+              // Onglet Collection (pour plus tard)
+              _CollectionTab(),
+            ],
+          ),
+          // Version en bas à droite
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: FutureBuilder<String>(
+                future: _getAppVersion(),
+                builder: (context, snapshot) {
+                  return Text(
+                    'v${snapshot.data ?? "1.0.1"}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<String> _getAppVersion() async {
+    try {
+      // Pour le web, on retourne la version depuis pubspec.yaml
+      return "1.0.3";
+    } catch (e) {
+      return "1.0.3";
+    }
   }
 }
 
@@ -123,16 +162,64 @@ class _HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<_HomeTab> {
   final CollectionService _collectionService = CollectionService();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollection();
+  }
+
+  Future<void> _loadCollection() async {
+    await _collectionService.loadCollection();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     final totalCardsCollected = _collectionService.collection.totalCards;
     final uniqueCardsCollected = _collectionService.collection.totalUniqueCards;
+    final isFirestoreAvailable = _collectionService.isFirestoreAvailable;
+    
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Indicateur Firestore
+          if (!isFirestoreAvailable)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                border: Border.all(color: Colors.orange),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Mode hors ligne : Vos données ne sont pas sauvegardées. Activez Firestore dans la console Firebase.',
+                      style: TextStyle(color: Colors.orange[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Informations utilisateur
           Card(
             child: Padding(

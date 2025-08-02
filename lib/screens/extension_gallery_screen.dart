@@ -62,31 +62,33 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${filteredCards.length} cartes',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                Text(
-                  widget.extension.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${filteredCards.length} cartes',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ),
-              ],
+                  Text(
+                    widget.extension.description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: Center( // Centrer le contenu
+            Center( // Centrer le contenu
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1200), // Largeur max pour grands écrans
                 child: GridView.builder(
+                  shrinkWrap: true, // Important pour le défilement global
+                  physics: const NeverScrollableScrollPhysics(), // Désactiver le défilement de la grille
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16), // Padding symétrique
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3, // 3 cartes par ligne
@@ -107,8 +109,8 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -206,10 +208,9 @@ class _CardTileState extends State<_CardTile> {
                   width: 28,
                   height: 28,
                   child: ElevatedButton(
-                    onPressed: quantity > 0 ? () {
-                      setState(() {
-                        _collectionService.removeCard(widget.card.name);
-                      });
+                    onPressed: quantity > 0 ? () async {
+                      await _collectionService.removeCard(widget.card.name);
+                      setState(() {});
                     } : null,
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -253,10 +254,9 @@ class _CardTileState extends State<_CardTile> {
                   width: 28,
                   height: 28,
                   child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _collectionService.addCard(widget.card.name);
-                      });
+                    onPressed: () async {
+                      await _collectionService.addCard(widget.card.name);
+                      setState(() {});
                     },
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.zero,
