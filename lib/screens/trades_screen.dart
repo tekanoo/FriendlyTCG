@@ -335,7 +335,7 @@ class _TradesScreenState extends State<TradesScreen> {
           ),
           IconButton(
             onPressed: () {
-              // TODO: Implémenter l'envoi de message
+              //TODO: Implémenter l'envoi de message
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Fonctionnalité de message à venir'),

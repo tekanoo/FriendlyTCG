@@ -195,9 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         duration: const Duration(seconds: 3),
                       ),
                     );
-                    if (user != null) {
-                      Navigator.of(context).pushReplacementNamed('/home');
-                    }
+                    // La navigation sera gérée automatiquement par AuthWrapper
                   },
                   child: const Text('Debug: Vérifier état'),
                 ),

@@ -89,23 +89,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         // Utilisateur connecté
         if (snapshot.hasData && snapshot.data != null) {
           debugPrint('AuthWrapper: Utilisateur connecté détecté: ${snapshot.data?.email}');
-          debugPrint('AuthWrapper: Navigation vers HomeScreen');
-          
-          // Navigation explicite vers /home pour éviter les problèmes de routing
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              final currentRoute = ModalRoute.of(context)?.settings.name;
-              debugPrint('AuthWrapper: Route actuelle: $currentRoute');
-              
-              if (currentRoute != '/home') {
-                debugPrint('AuthWrapper: Redirection forcée vers /home');
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/home',
-                  (route) => false,
-                );
-              }
-            }
-          });
+          debugPrint('AuthWrapper: Affichage de HomeScreen');
           
           return const HomeScreen();
         }

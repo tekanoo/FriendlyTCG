@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'firebase_options.dart';
 import 'widgets/auth_wrapper.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configurer l'URL strategy pour supprimer les hash (#) sur le web
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
   
   try {
     await Firebase.initializeApp(
@@ -33,12 +38,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const AuthWrapper(),
-        '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
-      },
+      home: const AuthWrapper(),
       debugShowCheckedModeBanner: false,
     );
   }

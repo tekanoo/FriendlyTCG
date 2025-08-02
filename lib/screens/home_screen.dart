@@ -32,9 +32,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<void> _signOut() async {
     try {
       await _authService.signOut();
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
-      }
+      // La navigation sera gérée automatiquement par AuthWrapper
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
