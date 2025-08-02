@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
+import '../widgets/delete_data_confirmation_dialog.dart';
 import 'extensions_screen.dart';
 import 'collection_extensions_screen.dart';
 import 'trades_main_screen.dart';
@@ -27,6 +28,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _deleteUserData() async {
+    try {
+      await _authService.deleteUserData();
+      // La navigation sera gérée automatiquement par AuthWrapper
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Toutes vos données ont été supprimées avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la suppression: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDeleteDataDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => DeleteDataConfirmationDialog(
+        onConfirm: _deleteUserData,
+      ),
+    );
   }
 
   Future<void> _signOut() async {
@@ -59,6 +94,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onSelected: (value) {
               if (value == 'logout') {
                 _signOut();
+              } else if (value == 'delete_data') {
+                _showDeleteDataDialog();
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -66,9 +103,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout),
+                    Icon(Icons.logout, color: Colors.blue),
                     SizedBox(width: 8),
                     Text('Se déconnecter'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'delete_data',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(
+                      'Supprimer mes données',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ],
                 ),
               ),

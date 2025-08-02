@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'collection_service.dart';
 
@@ -96,6 +97,77 @@ class AuthService {
     } catch (e) {
       debugPrint('AuthService: Erreur lors de la vérification du redirect: $e');
       return null;
+    }
+  }
+
+  // Supprimer toutes les données utilisateur
+  Future<void> deleteUserData() async {
+    try {
+      final user = currentUser;
+      if (user == null) {
+        throw Exception('Aucun utilisateur connecté');
+      }
+
+      final firestore = FirebaseFirestore.instance;
+      final userId = user.uid;
+
+      debugPrint('=== Début de la suppression des données pour l\'utilisateur $userId ===');
+
+      // 1. Supprimer les échanges où l'utilisateur est participant
+      debugPrint('Suppression des échanges...');
+      final tradesQuery1 = await firestore
+          .collection('trades')
+          .where('fromUserId', isEqualTo: userId)
+          .get();
+      
+      final tradesQuery2 = await firestore
+          .collection('trades')
+          .where('toUserId', isEqualTo: userId)
+          .get();
+
+      final allTrades = [...tradesQuery1.docs, ...tradesQuery2.docs];
+      
+      // Supprimer les messages de ces échanges
+      for (var tradeDoc in allTrades) {
+        debugPrint('Suppression des messages pour l\'échange ${tradeDoc.id}');
+        final messagesQuery = await firestore
+            .collection('trade_messages')
+            .where('tradeId', isEqualTo: tradeDoc.id)
+            .get();
+        
+        for (var messageDoc in messagesQuery.docs) {
+          await messageDoc.reference.delete();
+        }
+        
+        // Supprimer l'échange
+        await tradeDoc.reference.delete();
+      }
+
+      // 2. Supprimer le document utilisateur dans Firestore
+      debugPrint('Suppression du profil utilisateur...');
+      await firestore.collection('users').doc(userId).delete();
+
+      // 3. Vider la collection locale
+      debugPrint('Suppression de la collection locale...');
+      final collectionService = CollectionService();
+      collectionService.clearLocalCollectionOnly();
+
+      // 4. Supprimer le compte Firebase Auth
+      debugPrint('Suppression du compte Firebase Auth...');
+      await user.delete();
+
+      debugPrint('✅ Toutes les données utilisateur ont été supprimées avec succès');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('❌ Erreur Firebase Auth lors de la suppression: ${e.code} - ${e.message}');
+      
+      if (e.code == 'requires-recent-login') {
+        throw Exception('Veuillez vous reconnecter récemment pour supprimer votre compte');
+      } else {
+        throw Exception('Erreur lors de la suppression du compte: ${e.message}');
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la suppression des données: $e');
+      rethrow;
     }
   }
 
