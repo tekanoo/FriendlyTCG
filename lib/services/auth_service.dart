@@ -30,10 +30,14 @@ class AuthService {
       if (kIsWeb) {
         // Pour le web, utiliser signInWithPopup avec gestion d'erreurs améliorée
         try {
-          return await _firebaseAuth.signInWithPopup(googleProvider);
+          debugPrint('Tentative de connexion avec popup...');
+          final result = await _firebaseAuth.signInWithPopup(googleProvider);
+          debugPrint('Connexion popup réussie: ${result.user?.email}');
+          return result;
         } catch (popupError) {
           debugPrint('Erreur popup: $popupError');
           // Fallback vers redirect si popup échoue
+          debugPrint('Fallback vers redirect...');
           await _firebaseAuth.signInWithRedirect(googleProvider);
           return null; // Le redirect gérera la suite
         }
@@ -60,6 +64,23 @@ class AuthService {
     } catch (e) {
       debugPrint('Erreur générale: $e');
       throw Exception('Erreur lors de la connexion. Réessayez plus tard.');
+    }
+  }
+
+  // Vérifier s'il y a un résultat de redirection en attente
+  Future<UserCredential?> checkRedirectResult() async {
+    try {
+      debugPrint('Vérification du résultat de redirection...');
+      final result = await _firebaseAuth.getRedirectResult();
+      if (result.user != null) {
+        debugPrint('Utilisateur connecté via redirect: ${result.user?.email}');
+        return result;
+      }
+      debugPrint('Aucun résultat de redirection');
+      return null;
+    } catch (e) {
+      debugPrint('Erreur lors de la vérification du redirect: $e');
+      return null;
     }
   }
 

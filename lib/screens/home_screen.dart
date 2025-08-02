@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import 'extensions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,8 +10,21 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   Future<void> _signOut() async {
     try {
@@ -60,145 +74,258 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Informations utilisateur
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Informations du profil',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (user?.photoURL != null)
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: NetworkImage(user!.photoURL!),
-                            radius: 30,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user.displayName ?? 'Nom non disponible',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  user.email ?? 'Email non disponible',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Nom: ${user?.displayName ?? 'Non disponible'}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Email: ${user?.email ?? 'Non disponible'}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'UID: ${user?.uid ?? 'Non disponible'}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.home),
+              text: 'Accueil',
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Contenu principal de l'application
-            const Text(
-              'Bienvenue dans Friendly TCG !',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            Tab(
+              icon: Icon(Icons.extension),
+              text: 'Extensions',
             ),
-            
-            const SizedBox(height: 16),
-            
-            const Text(
-              'Vous êtes maintenant connecté. Ici, vous pourrez gérer vos cartes TCG, participer à des tournois et bien plus encore.',
-              style: TextStyle(fontSize: 16),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Boutons d'action (à personnaliser selon vos besoins)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Naviguer vers la collection de cartes
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fonctionnalité à venir !')),
-                    );
-                  },
-                  icon: const Icon(Icons.collections),
-                  label: const Text('Ma Collection'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Naviguer vers les tournois
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fonctionnalité à venir !')),
-                    );
-                  },
-                  icon: const Icon(Icons.emoji_events),
-                  label: const Text('Tournois'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Naviguer vers les échanges
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fonctionnalité à venir !')),
-                    );
-                  },
-                  icon: const Icon(Icons.swap_horiz),
-                  label: const Text('Échanges'),
-                ),
-              ],
+            Tab(
+              icon: Icon(Icons.collections),
+              text: 'Collection',
             ),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Onglet Accueil
+          _HomeTab(user: user),
+          // Onglet Extensions
+          const ExtensionsScreen(),
+          // Onglet Collection (pour plus tard)
+          _CollectionTab(),
+        ],
+      ),
+    );
+  }
+}
+
+// Widget pour l'onglet Accueil
+class _HomeTab extends StatelessWidget {
+  final User? user;
+
+  const _HomeTab({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Informations utilisateur
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Informations du profil',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (user?.photoURL != null)
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(user!.photoURL!),
+                          radius: 30,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user!.displayName ?? 'Nom non disponible',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                user!.email ?? 'Email non disponible',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Nom: ${user?.displayName ?? 'Non disponible'}',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Email: ${user?.email ?? 'Non disponible'}',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Statistiques
+          const Text(
+            'Vos statistiques',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Card(
+                  color: Colors.orange[50],
+                  child: const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.extension,
+                          size: 32,
+                          color: Colors.orange,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Extensions',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '1',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Card(
+                  color: Colors.blue[50],
+                  child: const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.collections,
+                          size: 32,
+                          color: Colors.blue,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Cartes totales',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '220',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 24),
+          
+          const Text(
+            'Bienvenue dans Friendly TCG !',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          const Text(
+            'Explorez les extensions disponibles pour découvrir toutes les cartes NewType Risings.',
+            style: TextStyle(fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Widget pour l'onglet Collection (temporaire)
+class _CollectionTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.collections,
+            size: 64,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Ma Collection',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Fonctionnalité à venir !',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
       ),
     );
   }

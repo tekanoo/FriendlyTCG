@@ -21,16 +21,32 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      debugPrint('Début de la connexion Google...');
       final UserCredential? result = await _authService.signInWithGoogle();
       
       if (result != null && mounted) {
         // Connexion réussie, l'AuthWrapper gérera automatiquement la navigation
         debugPrint('Connexion réussie pour: ${result.user?.email}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connexion réussie ! Bienvenue ${result.user?.displayName ?? result.user?.email}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       } else if (mounted) {
         // L'utilisateur a annulé ou redirect en cours
         debugPrint('Connexion annulée ou redirect en cours');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Redirection vers Google en cours...'),
+            backgroundColor: Colors.blue,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     } catch (e) {
+      debugPrint('Erreur de connexion: $e');
       if (mounted) {
         // Afficher un message d'erreur plus convivial
         String errorMessage = 'Erreur lors de la connexion';
