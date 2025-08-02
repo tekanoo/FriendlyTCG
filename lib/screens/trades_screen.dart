@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/trade_service.dart';
 import '../services/extension_service.dart';
+import '../services/collection_service.dart';
 import '../models/user_model.dart';
 import '../models/extension_model.dart';
 import '../widgets/card_tile_widget.dart';
@@ -17,6 +18,7 @@ class TradesScreen extends StatefulWidget {
 class _TradesScreenState extends State<TradesScreen> {
   final TradeService _tradeService = TradeService();
   final ExtensionService _extensionService = ExtensionService();
+  final CollectionService _collectionService = CollectionService();
   
   final List<String> _selectedCards = [];
   Map<String, List<UserModel>> _searchResults = {};
@@ -227,16 +229,69 @@ class _TradesScreenState extends State<TradesScreen> {
             runSpacing: 8,
             children: [
               for (String cardName in _selectedCards)
-                Chip(
-                  label: Text(cardName.replaceAll('.png', '')), // Afficher sans .png
-                  deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () => _toggleCardSelection(cardName),
-                  backgroundColor: Colors.blue.shade100,
-                ),
+                _buildSelectedCardChip(cardName),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSelectedCardChip(String cardName) {
+    final cardDisplayName = cardName.replaceAll('.png', '');
+    
+    return StreamBuilder<int>(
+      stream: _collectionService.getCardQuantityStream(cardName),
+      builder: (context, snapshot) {
+        final ownedQuantity = snapshot.data ?? 0;
+        
+        return Chip(
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(cardDisplayName),
+              if (ownedQuantity > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade600,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${ownedQuantity}x',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '0x',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          deleteIcon: const Icon(Icons.close, size: 18),
+          onDeleted: () => _toggleCardSelection(cardName),
+          backgroundColor: Colors.blue.shade100,
+        );
+      },
     );
   }
 
@@ -257,34 +312,81 @@ class _TradesScreenState extends State<TradesScreen> {
             final cardName = entry.key;
             final users = entry.value;
             
-            return Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cardName.replaceAll('.png', ''), // Afficher sans .png
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (users.isEmpty)
-                      const Text(
-                        'Aucun utilisateur ne possède cette carte',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
+            return StreamBuilder<int>(
+              stream: _collectionService.getCardQuantityStream(cardName),
+              builder: (context, snapshot) {
+                final ownedQuantity = snapshot.data ?? 0;
+                
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                cardName.replaceAll('.png', ''), // Afficher sans .png
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (ownedQuantity > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.green.shade300),
+                                ),
+                                child: Text(
+                                  'Vous: ${ownedQuantity}x',
+                                  style: TextStyle(
+                                    color: Colors.green.shade700,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.orange.shade300),
+                                ),
+                                child: Text(
+                                  'Vous: 0x',
+                                  style: TextStyle(
+                                    color: Colors.orange.shade700,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      )
-                    else
-                      ...users.map((user) => _buildUserTile(user, cardName)),
-                  ],
-                ),
-              ),
+                        const SizedBox(height: 12),
+                        if (users.isEmpty)
+                          const Text(
+                            'Aucun utilisateur ne possède cette carte',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          )
+                        else
+                          ...users.map((user) => _buildUserTile(user, cardName)),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           }),
           const SizedBox(height: 16),
@@ -382,12 +484,22 @@ class _TradesScreenState extends State<TradesScreen> {
           final cardDisplayName = cardImageName.replaceAll('.png', ''); // Nom d'affichage sans .png
           final isSelected = _selectedCards.contains(cardName);
           
+          // Obtenir le nombre d'exemplaires possédés
+          final ownedQuantity = _collectionService.getCardQuantity(cardName);
+          String subtitle = 'Extension: ${_currentExtension!.name}';
+          
+          if (ownedQuantity > 0) {
+            subtitle += ' • Vous possédez: ${ownedQuantity}x';
+          } else {
+            subtitle += ' • Vous ne possédez pas cette carte';
+          }
+          
           return CardTileWidget(
             cardName: cardDisplayName, // Afficher le nom sans .png
             imagePath: 'assets/images/extensions/newtype_risings/$cardImageName',
             isSelected: isSelected,
             onTap: () => _toggleCardSelection(cardName), // Mais stocker avec .png
-            subtitle: 'Extension: ${_currentExtension!.name}',
+            subtitle: subtitle,
           );
         },
       ),

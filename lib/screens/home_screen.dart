@@ -59,9 +59,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onSelected: (value) {
               if (value == 'logout') {
                 _signOut();
+              } else if (value == 'profile') {
+                Navigator.of(context).pushNamed('/profile');
               }
             },
             itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person),
+                    SizedBox(width: 8),
+                    Text('Mon Profil'),
+                  ],
+                ),
+              ),
               const PopupMenuItem<String>(
                 value: 'logout',
                 child: Row(

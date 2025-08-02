@@ -2,6 +2,7 @@ import '../models/card_collection.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class CollectionService {
   static final CollectionService _instance = CollectionService._internal();
@@ -11,6 +12,19 @@ class CollectionService {
   final CardCollection _collection = CardCollection();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isFirestoreAvailable = false;
+
+  // StreamController pour notifier les changements
+  final StreamController<Map<String, int>> _collectionStreamController = 
+      StreamController<Map<String, int>>.broadcast();
+  
+  final StreamController<String> _cardUpdateStreamController = 
+      StreamController<String>.broadcast();
+
+  // Stream pour écouter les changements de collection
+  Stream<Map<String, int>> get collectionStream => _collectionStreamController.stream;
+  
+  // Stream pour écouter les changements d'une carte spécifique
+  Stream<String> get cardUpdateStream => _cardUpdateStreamController.stream;
 
   // Obtenir la collection
   CardCollection get collection => _collection;
@@ -73,9 +87,11 @@ class CollectionService {
           cardsData.forEach((cardName, quantity) {
             _collection.setCardQuantity(cardName, quantity);
           });
+          _notifyCollectionChanged();
         }
       } else {
         debugPrint('📄 Nouveau utilisateur - collection vide');
+        _notifyCollectionChanged();
       }
       
     } catch (e) {
@@ -120,12 +136,22 @@ class CollectionService {
     }
   }
 
+  // Notifier les changements
+  void _notifyCollectionChanged() {
+    _collectionStreamController.add(Map<String, int>.from(_collection.collection));
+  }
+  
+  void _notifyCardChanged(String cardName) {
+    _cardUpdateStreamController.add(cardName);
+  }
+
   // Vider la collection locale
   void _clearLocalCollection() {
     final cardNames = _collection.collection.keys.toList();
     for (String cardName in cardNames) {
       _collection.setCardQuantity(cardName, 0);
     }
+    _notifyCollectionChanged();
   }
 
   // Vider seulement la collection locale sans sauvegarder (pour la déconnexion)
@@ -137,18 +163,24 @@ class CollectionService {
   // Ajouter une carte
   Future<void> addCard(String cardName) async {
     _collection.addCard(cardName);
+    _notifyCardChanged(cardName);
+    _notifyCollectionChanged();
     await _saveCollection();
   }
 
   // Retirer une carte
   Future<void> removeCard(String cardName) async {
     _collection.removeCard(cardName);
+    _notifyCardChanged(cardName);
+    _notifyCollectionChanged();
     await _saveCollection();
   }
 
   // Définir la quantité d'une carte
   Future<void> setCardQuantity(String cardName, int quantity) async {
     _collection.setCardQuantity(cardName, quantity);
+    _notifyCardChanged(cardName);
+    _notifyCollectionChanged();
     await _saveCollection();
   }
 
@@ -157,9 +189,34 @@ class CollectionService {
     return _collection.getCardQuantity(cardName);
   }
 
+  // Stream pour une carte spécifique
+  Stream<int> getCardQuantityStream(String cardName) {
+    return Stream.multi((controller) {
+      // Émettre la valeur actuelle immédiatement
+      controller.add(getCardQuantity(cardName));
+      
+      // Écouter les mises à jour
+      final subscription = cardUpdateStream
+          .where((updatedCardName) => updatedCardName == cardName)
+          .listen((updatedCardName) {
+        controller.add(getCardQuantity(cardName));
+      });
+      
+      controller.onCancel = () {
+        subscription.cancel();
+      };
+    });
+  }
+
   // Vider toute la collection
   Future<void> clearCollection() async {
     _clearLocalCollection();
     await _saveCollection();
+  }
+
+  // Nettoyer les ressources
+  void dispose() {
+    _collectionStreamController.close();
+    _cardUpdateStreamController.close();
   }
 }
