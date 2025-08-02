@@ -3,6 +3,7 @@ import '../models/extension_model.dart';
 import '../services/extension_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
+import '../widgets/adaptive_card_grid.dart';
 
 class ExtensionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -110,32 +111,38 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
             subtitle: widget.extension.description,
           ),
           
-          // Grille de cartes (fixe 3x3)
+          // Grille de cartes (adaptative)
           Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: GridView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, // 3 colonnes
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: currentPageCards.length,
-                  itemBuilder: (context, index) {
-                    final card = currentPageCards[index];
-                    return _CardTile(
-                      card: card,
-                      onTap: () {
-                        _showCardModal(context, card, filteredCards, 
-                            filteredCards.indexOf(card));
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final aspectRatio = CardAspectRatioCalculator.calculate(context);
+                
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1200),
+                    child: GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: aspectRatio,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: currentPageCards.length,
+                      itemBuilder: (context, index) {
+                        final card = currentPageCards[index];
+                        return _CardTile(
+                          card: card,
+                          onTap: () {
+                            _showCardModal(context, card, filteredCards, 
+                                filteredCards.indexOf(card));
+                          },
+                        );
                       },
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           
