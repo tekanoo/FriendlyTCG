@@ -99,7 +99,11 @@ class CollectionService {
       await userDoc.set({
         'cards': _collection.collection,
         'lastUpdated': FieldValue.serverTimestamp(),
-      });
+        'email': user.email,
+        'displayName': user.displayName,
+        'photoURL': user.photoURL,
+        'lastSeen': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
       
       debugPrint('✅ Collection sauvegardée');
       

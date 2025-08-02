@@ -5,6 +5,7 @@ import '../services/collection_service.dart';
 import '../widgets/card_price_widget.dart';
 import 'extensions_screen.dart';
 import 'collection_extensions_screen.dart';
+import 'trades_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -95,6 +96,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               icon: Icon(Icons.collections),
               text: 'Collection',
             ),
+            Tab(
+              icon: Icon(Icons.swap_horiz),
+              text: 'Échanges',
+            ),
           ],
         ),
       ),
@@ -109,6 +114,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               const ExtensionsScreen(),
               // Onglet Collection
               const CollectionExtensionsScreen(),
+              // Onglet Échanges
+              const TradesScreen(),
             ],
           ),
           // Version en bas à droite
