@@ -49,6 +49,8 @@ class CollectionService {
       final user = _auth.currentUser;
       if (user == null) {
         debugPrint('❌ Aucun utilisateur connecté');
+        // Vider la collection locale si aucun utilisateur
+        _clearLocalCollection();
         return;
       }
 
@@ -84,11 +86,17 @@ class CollectionService {
 
   // Sauvegarder la collection dans Firestore
   Future<void> _saveCollection() async {
-    if (!_isFirestoreAvailable) return;
+    if (!_isFirestoreAvailable) {
+      debugPrint('⚠️ Firestore non disponible - sauvegarde ignorée');
+      return;
+    }
 
     try {
       final user = _auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        debugPrint('⚠️ Aucun utilisateur connecté - sauvegarde ignorée');
+        return;
+      }
 
       debugPrint('💾 Sauvegarde de la collection...');
       
@@ -105,7 +113,7 @@ class CollectionService {
         'lastSeen': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
-      debugPrint('✅ Collection sauvegardée');
+      debugPrint('✅ Collection sauvegardée avec ${_collection.collection.length} cartes');
       
     } catch (e) {
       debugPrint('❌ Erreur lors de la sauvegarde: $e');
@@ -118,6 +126,12 @@ class CollectionService {
     for (String cardName in cardNames) {
       _collection.setCardQuantity(cardName, 0);
     }
+  }
+
+  // Vider seulement la collection locale sans sauvegarder (pour la déconnexion)
+  void clearLocalCollectionOnly() {
+    debugPrint('🗑️ Vidage de la collection locale uniquement (déconnexion)');
+    _clearLocalCollection();
   }
 
   // Ajouter une carte

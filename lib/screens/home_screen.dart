@@ -177,6 +177,15 @@ class _HomeTabState extends State<_HomeTab> {
     _loadCollection();
   }
 
+  @override
+  void didUpdateWidget(_HomeTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recharger la collection si l'utilisateur a changé
+    if (oldWidget.user?.uid != widget.user?.uid) {
+      _loadCollection();
+    }
+  }
+
   Future<void> _loadCollection() async {
     await _collectionService.loadCollection();
     if (mounted) {

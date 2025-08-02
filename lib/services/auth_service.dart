@@ -102,9 +102,9 @@ class AuthService {
   // Déconnexion simplifiée
   Future<void> signOut() async {
     try {
-      // Vider la collection avant de se déconnecter
+      // Vider seulement la collection locale sans sauvegarder
       final collectionService = CollectionService();
-      collectionService.clearCollection();
+      collectionService.clearLocalCollectionOnly();
       
       await _firebaseAuth.signOut();
     } catch (e) {
