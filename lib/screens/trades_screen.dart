@@ -210,7 +210,7 @@ class _TradesScreenState extends State<TradesScreen> {
             children: [
               for (String cardName in _selectedCards)
                 Chip(
-                  label: Text(cardName),
+                  label: Text(cardName.replaceAll('.png', '')), // Afficher sans .png
                   deleteIcon: const Icon(Icons.close, size: 18),
                   onDeleted: () => _toggleCardSelection(cardName),
                   backgroundColor: Colors.blue.shade100,
@@ -247,7 +247,7 @@ class _TradesScreenState extends State<TradesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      cardName,
+                      cardName.replaceAll('.png', ''), // Afficher sans .png
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -357,14 +357,16 @@ class _TradesScreenState extends State<TradesScreen> {
         itemCount: _currentExtension!.cardImages.length,
         itemBuilder: (context, index) {
           final cardImageName = _currentExtension!.cardImages[index];
-          final cardName = cardImageName.replaceAll('.png', '');
+          // Utiliser le nom complet avec .png pour la compatibilité avec Firestore
+          final cardName = cardImageName; // Ne pas enlever l'extension .png
+          final cardDisplayName = cardImageName.replaceAll('.png', ''); // Nom d'affichage sans .png
           final isSelected = _selectedCards.contains(cardName);
           
           return CardTileWidget(
-            cardName: cardName,
+            cardName: cardDisplayName, // Afficher le nom sans .png
             imagePath: 'assets/images/extensions/newtype_risings/$cardImageName',
             isSelected: isSelected,
-            onTap: () => _toggleCardSelection(cardName),
+            onTap: () => _toggleCardSelection(cardName), // Mais stocker avec .png
             subtitle: 'Extension: ${_currentExtension!.name}',
           );
         },
