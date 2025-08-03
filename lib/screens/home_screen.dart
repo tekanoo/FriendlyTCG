@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
+import '../widgets/collection_overview_widget.dart';
 import 'games_screen.dart';
 import 'collection_games_screen.dart';
 import 'trades_main_screen.dart';
@@ -213,283 +214,40 @@ class _HomeTabState extends State<_HomeTab> {
       );
     }
 
-    final totalCardsCollected = _collectionService.collection.totalCards;
-    final uniqueCardsCollected = _collectionService.collection.totalUniqueCards;
     final isFirestoreAvailable = _collectionService.isFirestoreAvailable;
     
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Indicateur Firestore
-          if (!isFirestoreAvailable)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.orange[100],
-                border: Border.all(color: Colors.orange),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.orange[700]),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Mode hors ligne : Vos données ne sont pas sauvegardées. Activez Firestore dans la console Firebase.',
-                      style: TextStyle(color: Colors.orange[700]),
-                    ),
-                  ),
-                ],
-              ),
+    return Column(
+      children: [
+        // Indicateur Firestore
+        if (!isFirestoreAvailable)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange[100],
+              border: Border.all(color: Colors.orange),
+              borderRadius: BorderRadius.circular(8),
             ),
-          // Informations utilisateur
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Informations du profil',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (widget.user?.photoURL != null)
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: NetworkImage(widget.user!.photoURL!),
-                          radius: 30,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.user!.displayName ?? 'Nom non disponible',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                widget.user!.email ?? 'Email non disponible',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Nom: ${widget.user?.displayName ?? 'Non disponible'}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Email: ${widget.user?.email ?? 'Non disponible'}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Statistiques
-          const Text(
-            'Vos statistiques',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Card(
-                  color: Colors.green[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.collections,
-                          size: 32,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Cartes collectées',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          totalCardsCollected.toString(),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Mode hors ligne : Vos données ne sont pas sauvegardées. Activez Firestore dans la console Firebase.',
+                    style: TextStyle(color: Colors.orange[700]),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Card(
-                  color: Colors.blue[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          size: 32,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Cartes uniques',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          uniqueCardsCollected.toString(),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Card(
-                  color: Colors.orange[50],
-                  child: const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.games,
-                          size: 32,
-                          color: Colors.orange,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'TCG',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          '1',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Card(
-                  color: Colors.purple[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.percent,
-                          size: 32,
-                          color: Colors.purple,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Progression',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.purple,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${uniqueCardsCollected > 0 ? ((uniqueCardsCollected / 220) * 100).toStringAsFixed(1) : '0.0'}%',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.purple,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          const Text(
-            'Bienvenue dans Friendly TCG !',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              ],
             ),
           ),
-          
-          const SizedBox(height: 16),
-          
-          const Text(
-            'Découvrez les différents jeux de cartes disponibles et explorez leurs extensions.',
-            style: TextStyle(fontSize: 16),
-          ),
-        ],
-      ),
+        
+        // Widget de présentation de la collection
+        const Expanded(
+          child: CollectionOverviewWidget(),
+        ),
+      ],
     );
   }
 }
