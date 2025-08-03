@@ -3,6 +3,7 @@ import '../models/collection_stats.dart';
 import '../services/collection_stats_service.dart';
 import '../services/collection_service.dart';
 import 'firestore_structure_viewer.dart';
+import '../screens/analytics_debug_screen.dart';
 
 class CollectionOverviewWidget extends StatefulWidget {
   const CollectionOverviewWidget({super.key});
@@ -128,6 +129,19 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
                   },
                   icon: const Icon(Icons.storage, size: 16),
                   label: const Text('Structure DB'),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnalyticsDebugScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics, size: 16),
+                  label: const Text('Analytics'),
                 ),
               ],
             ),

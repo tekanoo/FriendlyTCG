@@ -1,5 +1,6 @@
 import '../models/card_collection.dart';
 import '../models/structured_collection.dart';
+import 'analytics_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -235,6 +236,17 @@ class CollectionService {
     
     debugPrint('➕ Ajout carte: $cardName ($oldQuantity → $newQuantity)');
     
+    // Analytics : ajout de carte
+    final gameInfo = _determineGameAndExtension(cardName);
+    if (gameInfo != null) {
+      final analyticsService = AnalyticsService();
+      await analyticsService.logAddCard(
+        cardName: cardName,
+        gameId: gameInfo['gameId']!,
+        extensionId: gameInfo['extensionId']!,
+      );
+    }
+    
     _notifyCardChanged(cardName);
     _notifyCollectionChanged();
     await _saveCollection();
@@ -247,6 +259,17 @@ class CollectionService {
     final newQuantity = _collection.getCardQuantity(cardName);
     
     debugPrint('➖ Retrait carte: $cardName ($oldQuantity → $newQuantity)');
+    
+    // Analytics : suppression de carte
+    final gameInfo = _determineGameAndExtension(cardName);
+    if (gameInfo != null) {
+      final analyticsService = AnalyticsService();
+      await analyticsService.logRemoveCard(
+        cardName: cardName,
+        gameId: gameInfo['gameId']!,
+        extensionId: gameInfo['extensionId']!,
+      );
+    }
     
     _notifyCardChanged(cardName);
     _notifyCollectionChanged();
@@ -299,5 +322,46 @@ class CollectionService {
   void dispose() {
     _collectionStreamController.close();
     _cardUpdateStreamController.close();
+  }
+  
+  // Méthode helper pour déterminer le jeu et l'extension d'une carte
+  Map<String, String>? _determineGameAndExtension(String cardName) {
+    // Cartes Gundam
+    if (cardName.startsWith('GD01-') || cardName.startsWith('GD02-') || 
+        cardName.startsWith('GD03-') || cardName.startsWith('GD04-') ||
+        cardName.startsWith('GD05-') || cardName.startsWith('GD06-') ||
+        cardName.startsWith('GD07-') || cardName.startsWith('GD08-') ||
+        cardName.startsWith('GD09-') || cardName.startsWith('GD10-') ||
+        cardName.startsWith('GD') || cardName.contains('gundam')) {
+      return {
+        'gameId': 'gundam_card_game',
+        'extensionId': 'newtype_risings',
+      };
+    }
+    
+    // Cartes Pokémon
+    if (cardName.startsWith('SV8pt5') || cardName.startsWith('sv8pt5') ||
+        cardName.contains('prismatic') || cardName.contains('evolutions')) {
+      return {
+        'gameId': 'pokemon_tcg',
+        'extensionId': 'prismatic-evolutions',
+      };
+    }
+    
+    // Autres patterns pour Pokémon
+    if (cardName.toLowerCase().contains('pokemon') || 
+        cardName.toLowerCase().contains('poke') ||
+        cardName.startsWith('SV') || cardName.startsWith('sv')) {
+      return {
+        'gameId': 'pokemon_tcg',
+        'extensionId': 'prismatic-evolutions',
+      };
+    }
+    
+    // Défaut : Gundam
+    return {
+      'gameId': 'gundam_card_game',
+      'extensionId': 'newtype_risings',
+    };
   }
 }

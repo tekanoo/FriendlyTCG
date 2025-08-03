@@ -36,6 +36,7 @@ dependencies:
   # Firebase dependencies for web
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3
+  firebase_analytics: ^11.3.3
   cloud_firestore: ^5.6.0
   
   # UI components

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'collection_service.dart';
+import 'analytics_service.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -50,6 +51,17 @@ class AuthService {
           debugPrint('Tentative de connexion avec popup...');
           final result = await _firebaseAuth.signInWithPopup(googleProvider);
           debugPrint('Connexion popup réussie: ${result.user?.email}');
+          
+          // Analytics : connexion réussie
+          if (result.user != null) {
+            final analyticsService = AnalyticsService();
+            await analyticsService.logLogin(method: 'google');
+            await analyticsService.setUserProperties(
+              userId: result.user!.uid,
+              email: result.user!.email,
+            );
+          }
+          
           return result;
         } catch (popupError) {
           debugPrint('Erreur popup: $popupError');
@@ -101,6 +113,15 @@ class AuthService {
         debugPrint('AuthService: Utilisateur connecté via redirect: ${result.user?.email}');
         debugPrint('AuthService: User UID: ${result.user?.uid}');
         debugPrint('AuthService: User displayName: ${result.user?.displayName}');
+        
+        // Analytics : connexion via redirect réussie
+        final analyticsService = AnalyticsService();
+        await analyticsService.logLogin(method: 'google_redirect');
+        await analyticsService.setUserProperties(
+          userId: result.user!.uid,
+          email: result.user!.email,
+        );
+        
         return result;
       } else {
         debugPrint('AuthService: Aucun résultat de redirection (result.user est null)');
@@ -115,6 +136,10 @@ class AuthService {
   // Déconnexion simplifiée
   Future<void> signOut() async {
     try {
+      // Analytics : déconnexion
+      final analyticsService = AnalyticsService();
+      await analyticsService.logLogout();
+      
       // Vider seulement la collection locale sans sauvegarder
       final collectionService = CollectionService();
       collectionService.clearLocalCollectionOnly();

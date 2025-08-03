@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_model.dart';
 import '../services/game_service.dart';
+import '../services/analytics_service.dart';
 import 'extensions_screen.dart';
 
 class GamesScreen extends StatelessWidget {
@@ -45,16 +46,25 @@ class GamesScreen extends StatelessWidget {
                   children: games.map((game) {
                     return _GameCard(
                       game: game,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ExtensionsScreen(
-                              gameId: game.id,
-                              gameTitle: game.name,
-                            ),
-                          ),
+                      onTap: () async {
+                        // Analytics : consultation d'un jeu
+                        final analyticsService = AnalyticsService();
+                        await analyticsService.logViewGame(
+                          gameId: game.id,
+                          gameName: game.name,
                         );
+                        
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ExtensionsScreen(
+                                gameId: game.id,
+                                gameTitle: game.name,
+                              ),
+                            ),
+                          );
+                        }
                       },
                     );
                   }).toList(),
