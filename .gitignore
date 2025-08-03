@@ -110,3 +110,9 @@ npm-debug.log*
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
+
+# Fichiers de test temporaires
+debug_sorting.dart
+final_test.dart
+test_assets.dart
+test_sorting.dart

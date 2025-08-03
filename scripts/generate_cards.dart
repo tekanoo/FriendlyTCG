@@ -1,5 +1,7 @@
 ﻿import 'dart:io';
 
+// ignore_for_file: avoid_print
+
 void main() {
   print('🎯 Génération automatique des cartes...');
   
@@ -35,9 +37,9 @@ void main() {
       
       print('    📋 ${cards.length} cartes trouvées');
       
-      final methodName = 'get' + extName.split(RegExp(r'[_\-]'))
+      final methodName = 'get${extName.split(RegExp(r'[_\-]'))
           .map((w) => w[0].toUpperCase() + w.substring(1))
-          .join('') + 'Cards';
+          .join('')}Cards';
       
       output.writeln('  static List<String> $methodName() => [');
       for (final card in cards) {
@@ -73,9 +75,9 @@ void main() {
   output.writeln('  static List<String> getCardsByExtensionId(String extId) {');
   output.writeln('    switch (extId) {');
   for (final ext in allExtensions) {
-    final methodName = 'get' + ext.split(RegExp(r'[_\-]'))
+    final methodName = 'get${ext.split(RegExp(r'[_\-]'))
         .map((w) => w[0].toUpperCase() + w.substring(1))
-        .join('') + 'Cards';
+        .join('')}Cards';
     output.writeln('      case "$ext": return $methodName();');
   }
   output.writeln('      default: return [];');

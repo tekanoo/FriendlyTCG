@@ -38,8 +38,8 @@ class PaginationControls extends StatelessWidget {
             icon: const Icon(Icons.chevron_left),
             label: const Text('Page précédente'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: themeColor.withOpacity(0.1),
-              foregroundColor: themeColor.withOpacity(0.8),
+              backgroundColor: themeColor.withValues(alpha: 0.1),
+              foregroundColor: themeColor.withValues(alpha: 0.8),
               disabledBackgroundColor: Colors.grey[200],
               disabledForegroundColor: Colors.grey[500],
             ),
@@ -49,9 +49,9 @@ class PaginationControls extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: themeColor.withOpacity(0.1),
+              color: themeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: themeColor.withOpacity(0.3)),
+              border: Border.all(color: themeColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -61,7 +61,7 @@ class PaginationControls extends StatelessWidget {
                     label!,
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
-                      color: themeColor.withOpacity(0.8),
+                      color: themeColor.withValues(alpha: 0.8),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -70,7 +70,7 @@ class PaginationControls extends StatelessWidget {
                   '${currentPage + 1} / $totalPages',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: themeColor.withOpacity(0.9),
+                    color: themeColor.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -82,8 +82,8 @@ class PaginationControls extends StatelessWidget {
             icon: const Icon(Icons.chevron_right),
             label: const Text('Page suivante'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: themeColor.withOpacity(0.1),
-              foregroundColor: themeColor.withOpacity(0.8),
+              backgroundColor: themeColor.withValues(alpha: 0.1),
+              foregroundColor: themeColor.withValues(alpha: 0.8),
               disabledBackgroundColor: Colors.grey[200],
               disabledForegroundColor: Colors.grey[500],
             ),

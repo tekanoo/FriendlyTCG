@@ -1,5 +1,7 @@
 import 'dart:io';
 
+// ignore_for_file: avoid_print
+
 void main() {
   print('🎯 Génération automatique de la liste des cartes pour tous les jeux...');
   

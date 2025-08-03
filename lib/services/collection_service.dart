@@ -170,6 +170,8 @@ class CollectionService {
         });
         
       } catch (e2) {
+        // Ignore les erreurs de mise à jour des métadonnées utilisateur
+        // Ces erreurs ne sont pas critiques pour la fonctionnalité principale
       }
     }
   }
