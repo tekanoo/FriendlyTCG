@@ -66,7 +66,10 @@ class AutoGameService {
   
   /// Obtient les cartes pour une extension
   static List<String> getCardsForExtension(String extensionId) {
-    return GeneratedCardsList.getCardsByExtensionId(extensionId);
+    final cards = GeneratedCardsList.getCardsByExtensionId(extensionId);
+    // Trier les cartes par ordre alphabétique (sans distinction de casse)
+    cards.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return cards;
   }
   
   /// Obtient le chemin complet d'une carte
@@ -117,11 +120,11 @@ class AutoGameService {
   }
   
   static String _getExtensionImagePath(String gameName, String extensionName) {
-    // Retourner la première carte de l'extension
+    // Retourner la première carte de l'extension (ordre alphabétique)
     final cards = GeneratedCardsList.getCardsByExtensionId(extensionName);
     if (cards.isNotEmpty) {
-      // Trier les cartes pour avoir la première (souvent numérotée 1)
-      final sortedCards = cards.toList()..sort();
+      // Trier les cartes par ordre alphabétique pour avoir la première
+      final sortedCards = cards.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       return GeneratedCardsList.getCardPath(extensionName, sortedCards.first);
     }
     return 'assets/images/$gameName/$extensionName/cover.png';

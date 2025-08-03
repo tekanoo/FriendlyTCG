@@ -32,13 +32,24 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
       imagePath: AutoGameService.getCardImagePath(widget.extension.id, cardName),
       displayName: cardName.replaceAll('.png', ''),
     )).toList();
+    
+    // Trier les cartes par ordre alphabétique du nom d'affichage
+    cards.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
   }
 
   List<CardModel> get filteredCards {
-    if (searchQuery.isEmpty) return cards;
-    return cards.where((card) =>
-      card.displayName.toLowerCase().contains(searchQuery.toLowerCase())
-    ).toList();
+    List<CardModel> filtered;
+    if (searchQuery.isEmpty) {
+      filtered = cards;
+    } else {
+      filtered = cards.where((card) =>
+        card.displayName.toLowerCase().contains(searchQuery.toLowerCase())
+      ).toList();
+    }
+    
+    // Trier les cartes filtrées par ordre alphabétique
+    filtered.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    return filtered;
   }
 
   List<CardModel> get currentPageCards {
