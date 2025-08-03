@@ -74,8 +74,9 @@ class CollectionStatsService {
 
   /// Extrait le nom de la carte du chemin d'image
   String _extractCardNameFromPath(String imagePath) {
-    // Extraire le nom du fichier sans l'extension
-    final fileName = imagePath.split('/').last.replaceAll('.png', '');
+    // Le nom de la carte est simplement le nom du fichier
+    // Nous gardons le .png car c'est ainsi que les cartes sont stockées dans la collection
+    final fileName = imagePath.split('/').last;
     return fileName;
   }
 
