@@ -93,7 +93,8 @@ class _GameCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 280,
+        width: 300,  // Largeur fixe pour tous les jeux
+        height: 350, // Hauteur fixe pour tous les jeux
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.shade300),
@@ -107,11 +108,10 @@ class _GameCard extends StatelessWidget {
           color: Colors.white,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image du jeu
+            // Zone d'image avec taille fixe
             Container(
-              height: 160,
+              height: 200, // Hauteur fixe pour la zone d'image
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -125,18 +125,30 @@ class _GameCard extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 120,
-                    height: 120,
+                child: Container(
+                  width: 160,  // Taille fixe pour l'image
+                  height: 160, // Taille fixe pour l'image
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
                       game.imagePath,
-                      fit: BoxFit.cover,
+                      width: 160,
+                      height: 160,
+                      fit: BoxFit.cover, // Recadrage uniforme
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          width: 120,
-                          height: 120,
+                          width: 160,
+                          height: 160,
                           decoration: BoxDecoration(
                             color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(12),
@@ -154,47 +166,59 @@ class _GameCard extends StatelessWidget {
               ),
             ),
             
-            // Informations du jeu
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    game.name,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
+            // Zone d'informations avec hauteur fixe
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game.name,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          game.description,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    game.description,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Voir les extensions',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.blue.shade600,
-                          fontWeight: FontWeight.w600,
+                    
+                    // Bouton d'action
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 12),
+                      child: ElevatedButton.icon(
+                        onPressed: onTap,
+                        icon: const Icon(Icons.arrow_forward, size: 16),
+                        label: const Text('Explorer'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade50,
+                          foregroundColor: Colors.blue.shade700,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: Colors.blue.shade600,
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
