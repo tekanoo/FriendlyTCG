@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
-import '../services/extension_service.dart';
+import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
 import '../widgets/adaptive_card_grid.dart';
@@ -27,8 +27,12 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
   @override
   void initState() {
     super.initState();
-    final extensionService = ExtensionService();
-    cards = extensionService.getCardsForExtension(widget.extension.id);
+    final cardNames = AutoGameService.getCardsForExtension(widget.extension.id);
+    cards = cardNames.map((cardName) => CardModel(
+      name: cardName,
+      imagePath: AutoGameService.getCardImagePath(widget.extension.id, cardName),
+      displayName: cardName.replaceAll('.png', ''),
+    )).toList();
   }
 
   List<CardModel> get filteredCards {
