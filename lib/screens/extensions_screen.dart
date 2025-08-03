@@ -1,19 +1,39 @@
 import 'package:flutter/material.dart';
-import '../services/extension_service.dart';
+import '../services/game_service.dart';
 import '../models/extension_model.dart';
 import 'extension_gallery_screen.dart';
 
 class ExtensionsScreen extends StatelessWidget {
-  const ExtensionsScreen({super.key});
+  final String? gameId;
+  final String? gameTitle;
+
+  const ExtensionsScreen({
+    super.key,
+    this.gameId,
+    this.gameTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final extensionService = ExtensionService();
-    final extensions = extensionService.availableExtensions;
+    final gameService = GameService();
+    
+    // Si gameId est fourni, récupérer les extensions pour ce jeu
+    // Sinon, utiliser la logique par défaut (pour rétrocompatibilité)
+    List<ExtensionModel> extensions;
+    String title;
+    
+    if (gameId != null) {
+      extensions = gameService.getExtensionsForGame(gameId!);
+      title = gameTitle ?? 'Extensions';
+    } else {
+      // Logique par défaut - Gundam
+      extensions = gameService.getExtensionsForGame('gundam_card_game');
+      title = 'Extensions';
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Extensions'),
+        title: Text(title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SingleChildScrollView(

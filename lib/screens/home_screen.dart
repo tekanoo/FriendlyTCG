@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
-import 'extensions_screen.dart';
-import 'collection_extensions_screen.dart';
+import 'games_screen.dart';
+import 'collection_games_screen.dart';
 import 'trades_main_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -98,8 +98,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               text: 'Accueil',
             ),
             Tab(
-              icon: Icon(Icons.extension),
-              text: 'Extensions',
+              icon: Icon(Icons.games),
+              text: 'TCG',
             ),
             Tab(
               icon: Icon(Icons.collections),
@@ -119,10 +119,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             children: [
               // Onglet Accueil
               _HomeTab(user: user),
-              // Onglet Extensions
-              const ExtensionsScreen(),
+              // Onglet TCG (ex-Extensions)
+              const GamesScreen(),
               // Onglet Collection
-              const CollectionExtensionsScreen(),
+              const CollectionGamesScreen(),
               // Onglet Échanges
               const TradesMainScreen(),
             ],
@@ -408,13 +408,13 @@ class _HomeTabState extends State<_HomeTab> {
                     child: Column(
                       children: [
                         Icon(
-                          Icons.extension,
+                          Icons.games,
                           size: 32,
                           color: Colors.orange,
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'Extensions',
+                          'TCG',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.orange,
@@ -485,7 +485,7 @@ class _HomeTabState extends State<_HomeTab> {
           const SizedBox(height: 16),
           
           const Text(
-            'Explorez les extensions disponibles pour découvrir toutes les cartes NewType Risings.',
+            'Découvrez les différents jeux de cartes disponibles et explorez leurs extensions.',
             style: TextStyle(fontSize: 16),
           ),
         ],

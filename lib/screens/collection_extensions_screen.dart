@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
-import '../services/extension_service.dart';
+import '../services/game_service.dart';
 import 'collection_gallery_screen.dart';
 
 class CollectionExtensionsScreen extends StatefulWidget {
-  const CollectionExtensionsScreen({super.key});
+  final String? gameId;
+  final String? gameTitle;
+
+  const CollectionExtensionsScreen({
+    super.key,
+    this.gameId,
+    this.gameTitle,
+  });
 
   @override
   State<CollectionExtensionsScreen> createState() => _CollectionExtensionsScreenState();
@@ -12,12 +19,22 @@ class CollectionExtensionsScreen extends StatefulWidget {
 
 class _CollectionExtensionsScreenState extends State<CollectionExtensionsScreen> {
   late List<ExtensionModel> extensions;
+  late String pageTitle;
 
   @override
   void initState() {
     super.initState();
-    final extensionService = ExtensionService();
-    extensions = extensionService.availableExtensions;
+    final gameService = GameService();
+    
+    // Si gameId est fourni, récupérer les extensions pour ce jeu
+    if (widget.gameId != null) {
+      extensions = gameService.getExtensionsForGame(widget.gameId!);
+      pageTitle = 'Collection ${widget.gameTitle ?? 'TCG'}';
+    } else {
+      // Logique par défaut pour rétrocompatibilité
+      extensions = gameService.getExtensionsForGame('gundam_card_game');
+      pageTitle = 'Ma Collection';
+    }
   }
 
   @override
@@ -26,11 +43,11 @@ class _CollectionExtensionsScreenState extends State<CollectionExtensionsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Ma Collection',
-              style: TextStyle(
+              pageTitle,
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
