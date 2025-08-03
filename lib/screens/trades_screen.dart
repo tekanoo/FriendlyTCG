@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/trade_service.dart';
-import '../services/extension_service.dart';
+import '../services/game_service.dart';
+import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../models/user_with_location.dart';
+import '../models/user_model.dart';
 import '../models/extension_model.dart';
+import '../models/game_model.dart';
 import '../widgets/card_tile_widget.dart';
 import 'trade_offer_screen.dart';
 import 'my_trades_screen.dart';
@@ -17,43 +20,65 @@ class TradesScreen extends StatefulWidget {
 
 class _TradesScreenState extends State<TradesScreen> {
   final TradeService _tradeService = TradeService();
-  final ExtensionService _extensionService = ExtensionService();
+  final GameService _gameService = GameService();
   final CollectionService _collectionService = CollectionService();
   
   final List<String> _selectedCards = [];
   Map<String, List<UserWithLocation>> _searchResults = {};
-  bool _isLoading = false;
   bool _isSearching = false;
-  ExtensionModel? _currentExtension;
+  
+  // Sélection progressive
+  GameModel? _selectedGame;
+  ExtensionModel? _selectedExtension;
+  List<String> _availableCards = [];
+  
+  // Étapes de sélection
+  int _currentStep = 0; // 0: jeu, 1: extension, 2: cartes
 
   @override
   void initState() {
     super.initState();
-    _loadExtension();
     _tradeService.updateCurrentUserInfo();
   }
 
-  Future<void> _loadExtension() async {
+  // Sélectionner un jeu
+  void _selectGame(GameModel game) {
     setState(() {
-      _isLoading = true;
+      _selectedGame = game;
+      _selectedExtension = null;
+      _availableCards = [];
+      _selectedCards.clear();
+      _currentStep = 1;
     });
+  }
 
-    try {
-      final extensions = _extensionService.availableExtensions;
-      final extension = extensions.firstWhere(
-        (ext) => ext.id == 'newtype_risings',
-        orElse: () => throw Exception('Extension non trouvée'),
-      );
-      setState(() {
-        _currentExtension = extension;
-      });
-    } catch (e) {
-      debugPrint('❌ Erreur lors du chargement de l\'extension: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  // Sélectionner une extension
+  void _selectExtension(ExtensionModel extension) {
+    setState(() {
+      _selectedExtension = extension;
+      _availableCards = AutoGameService.getCardsForExtension(extension.id);
+      _selectedCards.clear();
+      _currentStep = 2;
+    });
+  }
+
+  // Revenir à l'étape précédente
+  void _goBack() {
+    setState(() {
+      if (_currentStep > 0) {
+        _currentStep--;
+        if (_currentStep == 0) {
+          _selectedGame = null;
+          _selectedExtension = null;
+          _availableCards = [];
+          _selectedCards.clear();
+        } else if (_currentStep == 1) {
+          _selectedExtension = null;
+          _availableCards = [];
+          _selectedCards.clear();
+        }
+      }
+    });
   }
 
   Future<void> _searchForCardOwners() async {
@@ -103,72 +128,163 @@ class _TradesScreenState extends State<TradesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (_currentExtension == null) {
-      return const Center(
-        child: Text('Extension non trouvée'),
-      );
-    }
-
     return Column(
       children: [
-        _buildHeader(),
-        _buildSelectedCardsSection(),
-        if (_searchResults.isNotEmpty) _buildSearchResults(),
-        if (_searchResults.isEmpty) _buildCardSelection(),
+        _buildProgressHeader(),
+        Expanded(
+          child: _buildCurrentStepContent(),
+        ),
       ],
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildProgressHeader() {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade400],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: Colors.blue.shade50,
+        border: Border(
+          bottom: BorderSide(color: Colors.blue.shade200),
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Échanges de cartes',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              if (_currentStep > 0)
+                IconButton(
+                  onPressed: _goBack,
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Retour',
+                ),
+              Expanded(
+                child: Text(
+                  _getStepTitle(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              IconButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const MyTradesScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.list, color: Colors.white),
-                tooltip: 'Mes échanges',
-              ),
+              if (_currentStep == 2)
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const MyTradesScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.history),
+                  tooltip: 'Mes échanges',
+                ),
             ],
           ),
           const SizedBox(height: 8),
+          _buildProgressIndicator(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return Row(
+      children: [
+        _buildStepIndicator(0, 'Jeu'),
+        Expanded(child: Container(height: 2, color: _currentStep > 0 ? Colors.blue : Colors.grey.shade300)),
+        _buildStepIndicator(1, 'Extension'),
+        Expanded(child: Container(height: 2, color: _currentStep > 1 ? Colors.blue : Colors.grey.shade300)),
+        _buildStepIndicator(2, 'Cartes'),
+      ],
+    );
+  }
+
+  Widget _buildStepIndicator(int step, String label) {
+    final isActive = _currentStep >= step;
+    return Column(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isActive ? Colors.blue : Colors.grey.shade300,
+          ),
+          child: Center(
+            child: Text(
+              '${step + 1}',
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isActive ? Colors.blue : Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getStepTitle() {
+    switch (_currentStep) {
+      case 0:
+        return 'Choisir un jeu';
+      case 1:
+        return 'Choisir une extension';
+      case 2:
+        return 'Sélectionner les cartes à échanger';
+      default:
+        return 'Échanges';
+    }
+  }
+
+  Widget _buildCurrentStepContent() {
+    switch (_currentStep) {
+      case 0:
+        return _buildGameSelection();
+      case 1:
+        return _buildExtensionSelection();
+      case 2:
+        return _buildCardSelection();
+      default:
+        return const Center(child: Text('Étape inconnue'));
+    }
+  }
+
+  Widget _buildGameSelection() {
+    final games = _gameService.availableGames;
+    
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            'Sélectionnez les cartes que vous recherchez',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white.withValues(alpha: 0.9),
+            'Sélectionnez un jeu de cartes :',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.2,
+              ),
+              itemCount: games.length,
+              itemBuilder: (context, index) {
+                final game = games[index];
+                return _buildGameCard(game);
+              },
             ),
           ),
         ],
@@ -176,50 +292,245 @@ class _TradesScreenState extends State<TradesScreen> {
     );
   }
 
+  Widget _buildGameCard(GameModel game) {
+    return InkWell(
+      onTap: () => _selectGame(game),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          color: Colors.white,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.blue.shade100,
+                      Colors.blue.shade50,
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Image.asset(
+                    game.imagePath,
+                    height: 60,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.games,
+                        size: 40,
+                        color: Colors.grey.shade400,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      game.name,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExtensionSelection() {
+    if (_selectedGame == null) {
+      return const Center(child: Text('Aucun jeu sélectionné'));
+    }
+
+    final extensions = _gameService.getExtensionsForGame(_selectedGame!.id);
+    
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Extensions disponibles pour ${_selectedGame!.name} :',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: extensions.length,
+              itemBuilder: (context, index) {
+                final extension = extensions[index];
+                return _buildExtensionCard(extension);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtensionCard(ExtensionModel extension) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => _selectExtension(extension),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  extension.imagePath,
+                  width: 60,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 60,
+                      height: 80,
+                      color: Colors.grey.shade200,
+                      child: Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey.shade400,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      extension.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${extension.cardImages.length} cartes',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      extension.description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardSelection() {
+    if (_selectedExtension == null) {
+      return const Center(child: Text('Aucune extension sélectionnée'));
+    }
+
+    return Column(
+      children: [
+        _buildSelectedCardsSection(),
+        if (_searchResults.isNotEmpty) 
+          Expanded(child: _buildSearchResults())
+        else 
+          Expanded(child: _buildCardGrid()),
+      ],
+    );
+  }
+
   Widget _buildSelectedCardsSection() {
     if (_selectedCards.isEmpty) return const SizedBox.shrink();
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: Colors.green.shade50,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300),
+          bottom: BorderSide(color: Colors.green.shade200),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Cartes sélectionnées (${_selectedCards.length})',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Cartes sélectionnées (${_selectedCards.length})',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
                 ),
               ),
-              Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: _clearSelection,
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Tout effacer'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: _isSearching ? null : _searchForCardOwners,
-                    icon: _isSearching 
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.search),
-                    label: Text(_isSearching ? 'Recherche...' : 'Rechercher'),
-                  ),
-                ],
+              TextButton.icon(
+                onPressed: _clearSelection,
+                icon: const Icon(Icons.clear_all, size: 16),
+                label: const Text('Tout effacer'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: _isSearching ? null : _searchForCardOwners,
+                icon: _isSearching
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search, size: 16),
+                label: Text(_isSearching ? 'Recherche...' : 'Rechercher'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
           ),
@@ -229,7 +540,50 @@ class _TradesScreenState extends State<TradesScreen> {
             runSpacing: 8,
             children: [
               for (String cardName in _selectedCards)
-                _buildSelectedCardChip(cardName),
+                StreamBuilder<int>(
+                  stream: _collectionService.getCardQuantityStream(cardName),
+                  builder: (context, snapshot) {
+                    final quantity = snapshot.data ?? 0;
+                    final displayName = cardName.replaceAll('.png', '');
+                    
+                    return Chip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              displayName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (quantity > 0) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$quantity',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      onDeleted: () => _toggleCardSelection(cardName),
+                      backgroundColor: quantity > 0 ? Colors.green.shade100 : null,
+                    );
+                  },
+                ),
             ],
           ),
         ],
@@ -237,85 +591,19 @@ class _TradesScreenState extends State<TradesScreen> {
     );
   }
 
-  Widget _buildSelectedCardChip(String cardName) {
-    final cardDisplayName = cardName.replaceAll('.png', '');
-    
-    return StreamBuilder<int>(
-      stream: _collectionService.getCardQuantityStream(cardName),
-      builder: (context, snapshot) {
-        final ownedQuantity = snapshot.data ?? 0;
-        
-        return Chip(
-          label: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(cardDisplayName),
-              if (ownedQuantity > 0) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade600,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${ownedQuantity}x',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade600,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    '0x',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          deleteIcon: const Icon(Icons.close, size: 18),
-          onDeleted: () => _toggleCardSelection(cardName),
-          backgroundColor: Colors.blue.shade100,
-        );
-      },
-    );
-  }
-
   Widget _buildSearchResults() {
-    return Expanded(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Résultats de recherche',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
           ..._searchResults.entries.map((entry) {
             final cardName = entry.key;
-            final users = entry.value;
-            
             return StreamBuilder<int>(
               stream: _collectionService.getCardQuantityStream(cardName),
               builder: (context, snapshot) {
-                final ownedQuantity = snapshot.data ?? 0;
+                final quantity = snapshot.data ?? 0;
+                final displayName = cardName.replaceAll('.png', '');
                 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -328,42 +616,26 @@ class _TradesScreenState extends State<TradesScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                cardName.replaceAll('.png', ''), // Afficher sans .png
-                                style: const TextStyle(
-                                  fontSize: 16,
+                                displayName,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            if (ownedQuantity > 0)
+                            if (quantity > 0)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
+                                  color: Colors.green,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.green.shade300),
                                 ),
                                 child: Text(
-                                  'Vous: ${ownedQuantity}x',
-                                  style: TextStyle(
-                                    color: Colors.green.shade700,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            else
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.orange.shade300),
-                                ),
-                                child: Text(
-                                  'Vous: 0x',
-                                  style: TextStyle(
-                                    color: Colors.orange.shade700,
+                                  'Possédée ($quantity)',
+                                  style: const TextStyle(
+                                    color: Colors.white,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -372,16 +644,71 @@ class _TradesScreenState extends State<TradesScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        if (users.isEmpty)
-                          const Text(
-                            'Aucun utilisateur ne possède cette carte',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          )
+                        if (entry.value.isEmpty)
+                          const Text('Aucun utilisateur trouvé pour cette carte.')
                         else
-                          ...users.map((user) => _buildUserTile(user, cardName)),
+                          ...entry.value.map((user) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundImage: user.photoURL != null
+                                        ? NetworkImage(user.photoURL!)
+                                        : null,
+                                    child: user.photoURL == null
+                                        ? Text(user.displayName?[0] ?? '?')
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user.displayName ?? 'Utilisateur anonyme',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        if (user.city != null)
+                                          Text(
+                                            '📍 ${user.city}',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => TradeOfferScreen(
+                                            targetUser: UserModel(
+                                              uid: user.uid,
+                                              email: user.email,
+                                              displayName: user.displayName,
+                                              cards: {},
+                                              lastSeen: DateTime.now(),
+                                            ),
+                                            wantedCard: cardName,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Échanger'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
                       ],
                     ),
                   ),
@@ -389,159 +716,54 @@ class _TradesScreenState extends State<TradesScreen> {
               },
             );
           }),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _searchResults.clear();
-              });
-            },
-            child: const Text('Nouvelle recherche'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserTile(UserWithLocation user, String cardName) {
-    final quantity = user.getCardQuantity(cardName);
-    final timeAgo = _getTimeAgo(user.lastSeen);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundImage: user.photoURL != null 
-                ? NetworkImage(user.photoURL!) 
-                : null,
-            child: user.photoURL == null 
-                ? Text(user.displayName?.substring(0, 1).toUpperCase() ?? 'U')
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.displayName ?? user.email,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (user.hasLocation)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on, 
-                        size: 14, 
-                        color: Colors.blue.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          user.locationDisplay,
-                          style: TextStyle(
-                            color: Colors.blue.shade600,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                Text(
-                  'Possède $quantity exemplaire${quantity > 1 ? 's' : ''}',
-                  style: TextStyle(
-                    color: Colors.green.shade700,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  'Vu $timeAgo',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+          if (_searchResults.isNotEmpty)
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _searchResults.clear();
+                  });
+                },
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Retour à la sélection'),
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => TradeOfferScreen(
-                    targetUser: user.toUserModel(),
-                    wantedCard: cardName,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.swap_horiz),
-            tooltip: 'Proposer un échange',
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildCardSelection() {
-    return Expanded(
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _currentExtension!.cardImages.length,
-        itemBuilder: (context, index) {
-          final cardImageName = _currentExtension!.cardImages[index];
-          // Utiliser le nom complet avec .png pour la compatibilité avec Firestore
-          final cardName = cardImageName; // Ne pas enlever l'extension .png
-          final cardDisplayName = cardImageName.replaceAll('.png', ''); // Nom d'affichage sans .png
-          final isSelected = _selectedCards.contains(cardName);
-          
-          // Obtenir le nombre d'exemplaires possédés
-          final ownedQuantity = _collectionService.getCardQuantity(cardName);
-          String subtitle = 'Extension: ${_currentExtension!.name}';
-          
-          if (ownedQuantity > 0) {
-            subtitle += ' • Vous possédez: ${ownedQuantity}x';
-          } else {
-            subtitle += ' • Vous ne possédez pas cette carte';
-          }
-          
-          return CardTileWidget(
-            cardName: cardDisplayName, // Afficher le nom sans .png
-            imagePath: 'assets/images/Gundam Cards/newtype_risings/$cardImageName',
-            isSelected: isSelected,
-            onTap: () => _toggleCardSelection(cardName), // Mais stocker avec .png
-            subtitle: subtitle,
-          );
-        },
+  Widget _buildCardGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 0.7,
       ),
+      itemCount: _availableCards.length,
+      itemBuilder: (context, index) {
+        final cardImageName = _availableCards[index];
+        final cardPath = AutoGameService.getCardImagePath(_selectedExtension!.id, cardImageName);
+        final displayName = cardImageName.replaceAll('.png', '');
+        final isSelected = _selectedCards.contains(cardImageName);
+        
+        String subtitle = 'Extension: ${_selectedExtension!.name}';
+        
+        return StreamBuilder<int>(
+          stream: _collectionService.getCardQuantityStream(cardImageName),
+          builder: (context, snapshot) {
+            return CardTileWidget(
+              cardName: displayName,
+              imagePath: cardPath,
+              subtitle: subtitle,
+              isSelected: isSelected,
+              onTap: () => _toggleCardSelection(cardImageName),
+            );
+          },
+        );
+      },
     );
-  }
-
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    
-    if (difference.inMinutes < 1) {
-      return 'à l\'instant';
-    } else if (difference.inHours < 1) {
-      return 'il y a ${difference.inMinutes} min';
-    } else if (difference.inDays < 1) {
-      return 'il y a ${difference.inHours}h';
-    } else if (difference.inDays < 30) {
-      return 'il y a ${difference.inDays}j';
-    } else {
-      return 'il y a plus d\'un mois';
-    }
   }
 }
