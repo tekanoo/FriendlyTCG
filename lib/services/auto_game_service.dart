@@ -106,18 +106,24 @@ class AutoGameService {
   }
   
   static String _getGameImagePath(String gameName) {
-    // Retourner le chemin de l'image du jeu
+    // Retourner le chemin de l'image du jeu depuis les logos
     if (gameName.toLowerCase() == 'gundam cards') {
-      return 'assets/images/gundam_logo.png';
+      return 'assets/logo/Gundam/gundam.webp';
     }
     if (gameName.toLowerCase() == 'pokemon') {
-      return 'assets/images/pokemon_logo.png';
+      return 'assets/logo/Pokémon/Pokemon-Logo.png';
     }
     return 'assets/images/default_game.png';
   }
   
   static String _getExtensionImagePath(String gameName, String extensionName) {
-    // Retourner le chemin par défaut pour les extensions
+    // Retourner la première carte de l'extension
+    final cards = GeneratedCardsList.getCardsByExtensionId(extensionName);
+    if (cards.isNotEmpty) {
+      // Trier les cartes pour avoir la première (souvent numérotée 1)
+      final sortedCards = cards.toList()..sort();
+      return GeneratedCardsList.getCardPath(extensionName, sortedCards.first);
+    }
     return 'assets/images/$gameName/$extensionName/cover.png';
   }
 }
