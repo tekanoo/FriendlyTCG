@@ -20,15 +20,13 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     
-    debugPrint('✅ Firebase initialisé avec succès');
-    
     // Initialiser Firebase Analytics
     final analyticsService = AnalyticsService();
     await analyticsService.initialize();
     
     runApp(const MyApp());
   } catch (e) {
-    debugPrint('❌ Erreur lors de l\'initialisation de Firebase: $e');
+    // En cas d'erreur Firebase, l'app continue de fonctionner
     runApp(const MyApp());
   }
 }

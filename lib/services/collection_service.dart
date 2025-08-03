@@ -1,9 +1,8 @@
-import '../models/card_collection.dart';
+﻿import '../models/card_collection.dart';
 import '../models/structured_collection.dart';
 import 'analytics_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 
 class CollectionService {
@@ -22,35 +21,28 @@ class CollectionService {
   final StreamController<String> _cardUpdateStreamController = 
       StreamController<String>.broadcast();
 
-  // Stream pour écouter les changements de collection
+  // Stream pour Ã©couter les changements de collection
   Stream<Map<String, int>> get collectionStream => _collectionStreamController.stream;
   
-  // Stream pour écouter les changements d'une carte spécifique
+  // Stream pour Ã©couter les changements d'une carte spÃ©cifique
   Stream<String> get cardUpdateStream => _cardUpdateStreamController.stream;
 
   // Obtenir la collection
   CardCollection get collection => _collection;
 
-  // Obtenir la collection sous forme structurée
+  // Obtenir la collection sous forme structurÃ©e
   StructuredCollection get structuredCollection => StructuredCollection.fromFlat(_collection.collection);
 
-  // Obtenir l'état de Firestore
+  // Obtenir l'Ã©tat de Firestore
   bool get isFirestoreAvailable => _isFirestoreAvailable;
 
   // Test de connexion Firestore simple
   Future<void> _testFirestoreConnection() async {
     try {
-      debugPrint('🔍 Test de connexion Firestore simple...');
-      
-      // Test ultra basique - juste vérifier si l'instance existe
+      // Test ultra basique - juste vÃ©rifier si l'instance existe
       FirebaseFirestore.instance;
-      debugPrint('✅ Instance Firestore accessible');
-      
       _isFirestoreAvailable = true;
-      debugPrint('✅ Firestore marqué comme disponible');
-      
     } catch (e) {
-      debugPrint('❌ Test Firestore échoué: $e');
       _isFirestoreAvailable = false;
     }
   }
@@ -58,24 +50,20 @@ class CollectionService {
   // Charger la collection depuis Firestore
   Future<void> loadCollection() async {
     final user = _auth.currentUser;
-    debugPrint('🔄 loadCollection appelé pour utilisateur: ${user?.email ?? "non connecté"}');
     
     await _testFirestoreConnection();
     
     if (!_isFirestoreAvailable) {
-      debugPrint('⚠️ Firestore non disponible - mode local uniquement');
       return;
     }
 
     try {
       if (user == null) {
-        debugPrint('❌ Aucun utilisateur connecté');
         // Vider la collection locale si aucun utilisateur
         _clearLocalCollection();
         return;
       }
 
-      debugPrint('📥 Chargement de la collection pour: ${user.email}');
       
       final userDoc = FirebaseFirestore.instance
           .collection('users')
@@ -90,50 +78,40 @@ class CollectionService {
           
           // Essayer d'abord de charger la nouvelle structure
           if (data['structuredCards'] != null) {
-            debugPrint('📊 Chargement de la structure organisée');
             try {
               final structuredData = Map<String, dynamic>.from(data['structuredCards']);
               final structuredCollection = StructuredCollection.fromFirestore(structuredData);
               cardsData = structuredCollection.toFlat();
-              debugPrint('✅ Structure organisée chargée: ${cardsData.length} cartes');
             } catch (e) {
-              debugPrint('⚠️ Erreur lors du chargement de la structure organisée: $e');
               // Fallback vers l'ancien format
               if (data['cards'] != null) {
                 cardsData = Map<String, int>.from(data['cards']);
-                debugPrint('📄 Utilisation de l\'ancien format de sauvegarde');
               }
             }
           } else if (data['cards'] != null) {
             // Utiliser l'ancien format
             cardsData = Map<String, int>.from(data['cards']);
-            debugPrint('📄 Chargement de l\'ancien format');
           }
           
           if (cardsData.isNotEmpty) {
-            debugPrint('✅ Collection trouvée: ${cardsData.length} cartes');
-            debugPrint('🔍 Aperçu des cartes: ${cardsData.entries.take(5).map((e) => "${e.key}: ${e.value}").join(", ")}...');
             
-            // Charger les données dans la collection locale
+            // Charger les donnÃ©es dans la collection locale
             _clearLocalCollection();
             cardsData.forEach((cardName, quantity) {
               _collection.setCardQuantity(cardName, quantity);
             });
             _notifyCollectionChanged();
           } else {
-            debugPrint('📄 Collection vide trouvée');
             _clearLocalCollection();
             _notifyCollectionChanged();
           }
         }
       } else {
-        debugPrint('📄 Nouveau utilisateur - collection vide');
         _clearLocalCollection();
         _notifyCollectionChanged();
       }
       
     } catch (e) {
-      debugPrint('❌ Erreur lors du chargement: $e');
       _isFirestoreAvailable = false;
     }
   }
@@ -141,41 +119,35 @@ class CollectionService {
   // Sauvegarder la collection dans Firestore
   Future<void> _saveCollection() async {
     if (!_isFirestoreAvailable) {
-      debugPrint('⚠️ Firestore non disponible - sauvegarde ignorée');
       return;
     }
 
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        debugPrint('⚠️ Aucun utilisateur connecté - sauvegarde ignorée');
         return;
       }
 
-      debugPrint('💾 Sauvegarde de la collection...');
       
       final userDoc = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid);
       
-      // Convertir la collection plate en structure organisée
+      // Convertir la collection plate en structure organisÃ©e
       final structuredCollection = StructuredCollection.fromFlat(_collection.collection);
       final structuredData = structuredCollection.toFirestore();
       
-      // Sauvegarder à la fois l'ancien format (pour compatibilité) et le nouveau
+      // Sauvegarder Ã  la fois l'ancien format (pour compatibilitÃ©) et le nouveau
       await userDoc.update({
-        'cards': _collection.collection, // Format ancien pour compatibilité
-        'structuredCards': structuredData, // Nouvelle structure organisée
+        'cards': _collection.collection, // Format ancien pour compatibilitÃ©
+        'structuredCards': structuredData, // Nouvelle structure organisÃ©e
         'lastUpdated': FieldValue.serverTimestamp(),
         'lastSeen': FieldValue.serverTimestamp(),
       });
       
-      debugPrint('✅ Collection sauvegardée avec ${_collection.collection.length} cartes');
-      debugPrint('🏗️ Structure organisée: ${structuredData.keys.join(", ")}');
       
     } catch (e) {
-      debugPrint('❌ Erreur lors de la sauvegarde: $e');
-      // Si update échoue (document n'existe pas), créer le document
+      // Si update Ã©choue (document n'existe pas), crÃ©er le document
       try {
         final user = _auth.currentUser;
         if (user == null) return;
@@ -197,9 +169,7 @@ class CollectionService {
           'lastSeen': FieldValue.serverTimestamp(),
         });
         
-        debugPrint('✅ Collection créée avec ${_collection.collection.length} cartes');
       } catch (e2) {
-        debugPrint('❌ Erreur lors de la création du document: $e2');
       }
     }
   }
@@ -222,19 +192,14 @@ class CollectionService {
     _notifyCollectionChanged();
   }
 
-  // Vider seulement la collection locale sans sauvegarder (pour la déconnexion)
+  // Vider seulement la collection locale sans sauvegarder (pour la dÃ©connexion)
   void clearLocalCollectionOnly() {
-    debugPrint('🗑️ Vidage de la collection locale uniquement (déconnexion)');
     _clearLocalCollection();
   }
 
   // Ajouter une carte
   Future<void> addCard(String cardName) async {
-    final oldQuantity = _collection.getCardQuantity(cardName);
     _collection.addCard(cardName);
-    final newQuantity = _collection.getCardQuantity(cardName);
-    
-    debugPrint('➕ Ajout carte: $cardName ($oldQuantity → $newQuantity)');
     
     // Analytics : ajout de carte
     final gameInfo = _determineGameAndExtension(cardName);
@@ -254,11 +219,7 @@ class CollectionService {
 
   // Retirer une carte
   Future<void> removeCard(String cardName) async {
-    final oldQuantity = _collection.getCardQuantity(cardName);
     _collection.removeCard(cardName);
-    final newQuantity = _collection.getCardQuantity(cardName);
-    
-    debugPrint('➖ Retrait carte: $cardName ($oldQuantity → $newQuantity)');
     
     // Analytics : suppression de carte
     final gameInfo = _determineGameAndExtension(cardName);
@@ -278,28 +239,25 @@ class CollectionService {
 
   // Définir la quantité d'une carte
   Future<void> setCardQuantity(String cardName, int quantity) async {
-    final oldQuantity = _collection.getCardQuantity(cardName);
     _collection.setCardQuantity(cardName, quantity);
-    
-    debugPrint('🔢 Quantité carte: $cardName ($oldQuantity → $quantity)');
     
     _notifyCardChanged(cardName);
     _notifyCollectionChanged();
     await _saveCollection();
   }
 
-  // Obtenir la quantité d'une carte
+  // Obtenir la quantitÃ© d'une carte
   int getCardQuantity(String cardName) {
     return _collection.getCardQuantity(cardName);
   }
 
-  // Stream pour une carte spécifique
+  // Stream pour une carte spÃ©cifique
   Stream<int> getCardQuantityStream(String cardName) {
     return Stream.multi((controller) {
-      // Émettre la valeur actuelle immédiatement
+      // Ã‰mettre la valeur actuelle immÃ©diatement
       controller.add(getCardQuantity(cardName));
       
-      // Écouter les mises à jour
+      // Ã‰couter les mises Ã  jour
       final subscription = cardUpdateStream
           .where((updatedCardName) => updatedCardName == cardName)
           .listen((updatedCardName) {
@@ -324,7 +282,7 @@ class CollectionService {
     _cardUpdateStreamController.close();
   }
   
-  // Méthode helper pour déterminer le jeu et l'extension d'une carte
+  // MÃ©thode helper pour dÃ©terminer le jeu et l'extension d'une carte
   Map<String, String>? _determineGameAndExtension(String cardName) {
     // Cartes Gundam
     if (cardName.startsWith('GD01-') || cardName.startsWith('GD02-') || 
@@ -339,7 +297,7 @@ class CollectionService {
       };
     }
     
-    // Cartes Pokémon
+    // Cartes PokÃ©mon
     if (cardName.startsWith('SV8pt5') || cardName.startsWith('sv8pt5') ||
         cardName.contains('prismatic') || cardName.contains('evolutions')) {
       return {
@@ -348,7 +306,7 @@ class CollectionService {
       };
     }
     
-    // Autres patterns pour Pokémon
+    // Autres patterns pour PokÃ©mon
     if (cardName.toLowerCase().contains('pokemon') || 
         cardName.toLowerCase().contains('poke') ||
         cardName.startsWith('SV') || cardName.startsWith('sv')) {
@@ -358,7 +316,7 @@ class CollectionService {
       };
     }
     
-    // Défaut : Gundam
+    // DÃ©faut : Gundam
     return {
       'gameId': 'gundam_card_game',
       'extensionId': 'newtype_risings',

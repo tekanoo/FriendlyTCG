@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../models/extension_model.dart';
 import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
@@ -73,7 +73,7 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   void _onSearchChanged(String value) {
     setState(() {
       searchQuery = value;
-      currentPage = 0; // Reset à la première page lors de la recherche
+      currentPage = 0; // Reset Ã  la premiÃ¨re page lors de la recherche
     });
   }
 
@@ -150,7 +150,7 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
             ),
           ),
           
-          // Contrôles de pagination
+          // ContrÃ´les de pagination
           PaginationControls(
             currentPage: currentPage,
             totalPages: totalPages,
@@ -198,7 +198,7 @@ class _CardTileState extends State<_CardTile> {
         final int quantity = snapshot.data ?? 0;
 
         return Card(
-          elevation: 2, // Ombre plus marquée
+          elevation: 2, // Ombre plus marquÃ©e
           margin: const EdgeInsets.all(2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -214,7 +214,7 @@ class _CardTileState extends State<_CardTile> {
                       borderRadius: BorderRadius.circular(6), // Coins plus arrondis
                       child: Image.asset(
                         widget.card.imagePath,
-                        fit: BoxFit.contain, // Voir l'image entière
+                        fit: BoxFit.contain, // Voir l'image entiÃ¨re
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             color: Colors.grey[200],
@@ -247,7 +247,7 @@ class _CardTileState extends State<_CardTile> {
                 ),
               ),
               
-              // Contrôles de collection
+              // ContrÃ´les de collection
               Container(
                 height: 36, // Hauteur plus confortable
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -260,7 +260,6 @@ class _CardTileState extends State<_CardTile> {
                       height: 28,
                       child: ElevatedButton(
                         onPressed: quantity > 0 ? () {
-                          print('🔽 UI: Retrait de ${widget.card.name}, quantité actuelle: $quantity');
                           _collectionService.removeCard(widget.card.name);
                         } : null,
                         style: ElevatedButton.styleFrom(
@@ -276,7 +275,7 @@ class _CardTileState extends State<_CardTile> {
                       ),
                     ),
                     
-                    // Quantité
+                    // QuantitÃ©
                     Container(
                       width: 32,
                       height: 28,
@@ -306,7 +305,6 @@ class _CardTileState extends State<_CardTile> {
                       height: 28,
                       child: ElevatedButton(
                         onPressed: () {
-                          print('🔼 UI: Ajout de ${widget.card.name}, quantité actuelle: $quantity');
                           _collectionService.addCard(widget.card.name);
                         },
                         style: ElevatedButton.styleFrom(
@@ -355,8 +353,8 @@ class _CardModalState extends State<_CardModal> {
     super.initState();
     currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    // NOTE: Ne pas recharger la collection ici car cela écrase les modifications locales
-    // La collection est déjà chargée dans HomeScreen
+    // NOTE: Ne pas recharger la collection ici car cela Ã©crase les modifications locales
+    // La collection est dÃ©jÃ  chargÃ©e dans HomeScreen
   }
 
   @override
@@ -442,12 +440,12 @@ class _CardModalState extends State<_CardModal> {
                 },
               ),
             ),
-            // Footer avec compteur, contrôles de collection et bouton fermer
+            // Footer avec compteur, contrÃ´les de collection et bouton fermer
             Container(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Contrôles de collection
+                  // ContrÃ´les de collection
                   _buildCollectionControls(widget.cards[currentIndex]),
                   const SizedBox(height: 16),
                   // Compteur et bouton fermer

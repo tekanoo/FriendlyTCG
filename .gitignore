@@ -57,20 +57,28 @@ firebase-tools-instant-win.exe
 
 # Environment variables
 .env
-.env.local
-.env.production
+.env.*
 
-# API Keys (keep your secrets safe!)
+# API Keys & Secrets (SÉCURITÉ CRITIQUE)
 lib/config/api_keys.dart
+lib/config/secrets.dart
+lib/config/private_config.dart
+service-account-*.json
+*-private-key.json
+
+# Firebase Security
+lib/config/service_account.json
+lib/config/private_keys.dart
+*.pem
+*.p12
+.runtimeconfig.json
+
+# Production Config (si vous stockez des secrets dedans)
+lib/config/production_secrets.dart
+
 # firebase_options.dart contient des clés publiques Firebase Web (sûres à committer)
 # Décommentez la ligne suivante si vous préférez les garder privées :
 # lib/firebase_options.dart
-
-# VRAIES clés secrètes (ne jamais committer) :
-# lib/config/service_account.json
-# lib/config/private_keys.dart
-# *.pem
-# *.p12
 
 # Development
 .vscode/settings.json

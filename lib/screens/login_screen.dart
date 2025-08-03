@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -21,36 +21,30 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _checkCurrentUser() {
-    final user = _authService.currentUser;
-    debugPrint('=== LoginScreen: Vérification utilisateur actuel ===');
-    debugPrint('LoginScreen: User actuel: ${user?.email ?? 'null'}');
     // Suppression de la navigation automatique - laissons l'AuthWrapper gérer
   }
 
   Future<void> _signInWithGoogle() async {
-    if (_isLoading) return; // Éviter les clics multiples
+    if (_isLoading) return; // Ã‰viter les clics multiples
     
     setState(() {
       _isLoading = true;
     });
 
     try {
-      debugPrint('Début de la connexion Google...');
       final UserCredential? result = await _authService.signInWithGoogle();
       
       if (result != null && mounted) {
-        // Connexion réussie, l'AuthWrapper gérera automatiquement la navigation
-        debugPrint('Connexion réussie pour: ${result.user?.email}');
+        // Connexion rÃ©ussie, l'AuthWrapper gÃ©rera automatiquement la navigation
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Connexion réussie ! Bienvenue ${result.user?.displayName ?? result.user?.email}'),
+            content: Text('Connexion rÃ©ussie ! Bienvenue ${result.user?.displayName ?? result.user?.email}'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
         );
       } else if (mounted) {
-        // L'utilisateur a annulé ou redirect en cours
-        debugPrint('Connexion annulée ou redirect en cours');
+        // L'utilisateur a annulÃ© ou redirect en cours
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Redirection vers Google en cours...'),
@@ -60,17 +54,16 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Erreur de connexion: $e');
       if (mounted) {
         // Afficher un message d'erreur plus convivial
         String errorMessage = 'Erreur lors de la connexion';
         
         if (e.toString().contains('popup')) {
           errorMessage = 'Veuillez autoriser les popups pour vous connecter';
-        } else if (e.toString().contains('réseau') || e.toString().contains('network')) {
-          errorMessage = 'Vérifiez votre connexion internet';
+        } else if (e.toString().contains('rÃ©seau') || e.toString().contains('network')) {
+          errorMessage = 'VÃ©rifiez votre connexion internet';
         } else if (e.toString().contains('many-requests')) {
-          errorMessage = 'Trop de tentatives. Réessayez dans quelques minutes';
+          errorMessage = 'Trop de tentatives. RÃ©essayez dans quelques minutes';
         }
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -79,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
-              label: 'Réessayer',
+              label: 'RÃ©essayer',
               textColor: Colors.white,
               onPressed: () => _signInWithGoogle(),
             ),
@@ -186,25 +179,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: () {
                     final user = _authService.currentUser;
-                    debugPrint('=== DEBUG: État actuel ===');
-                    debugPrint('User: ${user?.email ?? 'null'}');
-                    debugPrint('IsSignedIn: ${_authService.isSignedIn}');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('User: ${user?.email ?? 'null'} - SignedIn: ${_authService.isSignedIn}'),
                         duration: const Duration(seconds: 3),
                       ),
                     );
-                    // La navigation sera gérée automatiquement par AuthWrapper
+                    // La navigation sera gÃ©rÃ©e automatiquement par AuthWrapper
                   },
-                  child: const Text('Debug: Vérifier état'),
+                  child: const Text('Debug: VÃ©rifier Ã©tat'),
                 ),
               
               const SizedBox(height: 40),
               
-              // Informations supplémentaires
+              // Informations supplÃ©mentaires
               const Text(
-                'En vous connectant, vous acceptez nos conditions d\'utilisation et notre politique de confidentialité.',
+                'En vous connectant, vous acceptez nos conditions d\'utilisation et notre politique de confidentialitÃ©.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
