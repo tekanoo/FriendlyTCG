@@ -4,6 +4,7 @@ class ExtensionModel {
   final String description;
   final String imagePath;
   final List<String> cardImages;
+  final String gameId; // Ajout du gameId pour associer l'extension à un jeu
 
   ExtensionModel({
     required this.id,
@@ -11,6 +12,7 @@ class ExtensionModel {
     required this.description,
     required this.imagePath,
     required this.cardImages,
+    required this.gameId,
   });
 }
 

@@ -518,7 +518,7 @@ class _TradesScreenState extends State<TradesScreen> {
           
           return CardTileWidget(
             cardName: cardDisplayName, // Afficher le nom sans .png
-            imagePath: 'assets/images/extensions/newtype_risings/$cardImageName',
+            imagePath: 'assets/images/Gundam Cards/newtype_risings/$cardImageName',
             isSelected: isSelected,
             onTap: () => _toggleCardSelection(cardName), // Mais stocker avec .png
             subtitle: subtitle,

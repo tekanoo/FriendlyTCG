@@ -258,7 +258,7 @@ class _TradeOfferScreenState extends State<TradeOfferScreen> {
                 
                 return CardTileWidget(
                   cardName: cardDisplayName,
-                  imagePath: 'assets/images/extensions/newtype_risings/$cardName',
+                  imagePath: 'assets/images/Gundam Cards/newtype_risings/$cardName',
                   isSelected: isSelected,
                   onTap: () {
                     setState(() {

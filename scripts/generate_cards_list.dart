@@ -3,10 +3,10 @@ import 'dart:io';
 void main() {
   print('🎯 Génération automatique de la liste des cartes...');
   
-  final assetsDir = Directory('assets/images/extensions');
+  final assetsDir = Directory('assets/images/Gundam Cards');
   
   if (!assetsDir.existsSync()) {
-    print('❌ Le dossier assets/images/extensions n\'existe pas');
+    print('❌ Le dossier assets/images/Gundam Cards n\'existe pas');
     exit(1);
   }
   

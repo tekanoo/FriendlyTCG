@@ -15,17 +15,16 @@ class GameService {
       id: 'gundam_card_game',
       name: 'Gundam Card Game',
       description: 'Le jeu de cartes officiel Gundam avec des mechas légendaires',
-      imagePath: 'assets/images/extensions/newtype_risings/GD01-001.png', // Image temporaire
-      folderPath: 'assets/images/extensions',
+      imagePath: 'assets/images/Gundam Cards/newtype_risings/GD01-001.png', // Image temporaire
+      folderPath: 'assets/images/Gundam Cards',
     ),
-    // Exemple pour Pokemon (à ajouter plus tard)
-    // const GameModel(
-    //   id: 'pokemon_tcg',
-    //   name: 'Pokémon TCG',
-    //   description: 'Le célèbre jeu de cartes Pokémon',
-    //   imagePath: 'assets/images/games/pokemon_logo.png',
-    //   folderPath: 'assets/images/pokemon_extensions',
-    // ),
+    const GameModel(
+      id: 'pokemon_tcg',
+      name: 'Pokémon TCG',
+      description: 'Le célèbre jeu de cartes Pokémon',
+      imagePath: 'assets/images/Pokemon/prismatic-evolutions/SV8pt5_FR_63-2x.png',
+      folderPath: 'assets/images/Pokemon',
+    ),
   ];
 
   List<GameModel> get availableGames => _availableGames;
@@ -41,20 +40,6 @@ class GameService {
 
   // Récupérer les extensions pour un jeu donné
   List<ExtensionModel> getExtensionsForGame(String gameId) {
-    switch (gameId) {
-      case 'gundam_card_game':
-        // Utiliser les extensions existantes de ExtensionService
-        return _extensionService.availableExtensions;
-      case 'pokemon_tcg':
-        return _getPokemonExtensions();
-      default:
-        return [];
-    }
-  }
-
-  // Extensions Pokemon (exemple pour plus tard)
-  List<ExtensionModel> _getPokemonExtensions() {
-    // À implémenter plus tard
-    return [];
+    return _extensionService.getExtensionsForGame(gameId);
   }
 }
