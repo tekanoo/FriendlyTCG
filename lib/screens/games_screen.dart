@@ -125,43 +125,25 @@ class _GameCard extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: Container(
-                  width: 160,  // Taille fixe pour l'image
-                  height: 160, // Taille fixe pour l'image
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                child: Image.asset(
+                  game.imagePath,
+                  height: 120,
+                  fit: BoxFit.contain, // Garder les proportions et centrer
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 120,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      game.imagePath,
-                      width: 160,
-                      height: 160,
-                      fit: BoxFit.cover, // Recadrage uniforme
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 160,
-                          height: 160,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.games,
-                            size: 60,
-                            color: Colors.grey.shade400,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                      child: Icon(
+                        Icons.games,
+                        size: 60,
+                        color: Colors.grey.shade400,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
