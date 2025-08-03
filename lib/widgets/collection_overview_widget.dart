@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/collection_stats.dart';
 import '../services/collection_stats_service.dart';
 import '../services/collection_service.dart';
+import 'firestore_structure_viewer.dart';
 
 class CollectionOverviewWidget extends StatefulWidget {
   const CollectionOverviewWidget({super.key});
@@ -114,6 +115,19 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FirestoreStructureViewer(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.storage, size: 16),
+                  label: const Text('Structure DB'),
                 ),
               ],
             ),

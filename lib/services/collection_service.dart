@@ -1,4 +1,5 @@
 import '../models/card_collection.dart';
+import '../models/structured_collection.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -28,6 +29,9 @@ class CollectionService {
 
   // Obtenir la collection
   CardCollection get collection => _collection;
+
+  // Obtenir la collection sous forme structurée
+  StructuredCollection get structuredCollection => StructuredCollection.fromFlat(_collection.collection);
 
   // Obtenir l'état de Firestore
   bool get isFirestoreAvailable => _isFirestoreAvailable;
@@ -80,17 +84,46 @@ class CollectionService {
       
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
-        if (data != null && data['cards'] != null) {
-          final cardsData = Map<String, int>.from(data['cards']);
-          debugPrint('✅ Collection trouvée: ${cardsData.length} cartes');
-          debugPrint('🔍 Aperçu des cartes: ${cardsData.entries.take(5).map((e) => "${e.key}: ${e.value}").join(", ")}...');
+        if (data != null) {
+          Map<String, int> cardsData = {};
           
-          // Charger les données dans la collection locale
-          _clearLocalCollection();
-          cardsData.forEach((cardName, quantity) {
-            _collection.setCardQuantity(cardName, quantity);
-          });
-          _notifyCollectionChanged();
+          // Essayer d'abord de charger la nouvelle structure
+          if (data['structuredCards'] != null) {
+            debugPrint('📊 Chargement de la structure organisée');
+            try {
+              final structuredData = Map<String, dynamic>.from(data['structuredCards']);
+              final structuredCollection = StructuredCollection.fromFirestore(structuredData);
+              cardsData = structuredCollection.toFlat();
+              debugPrint('✅ Structure organisée chargée: ${cardsData.length} cartes');
+            } catch (e) {
+              debugPrint('⚠️ Erreur lors du chargement de la structure organisée: $e');
+              // Fallback vers l'ancien format
+              if (data['cards'] != null) {
+                cardsData = Map<String, int>.from(data['cards']);
+                debugPrint('📄 Utilisation de l\'ancien format de sauvegarde');
+              }
+            }
+          } else if (data['cards'] != null) {
+            // Utiliser l'ancien format
+            cardsData = Map<String, int>.from(data['cards']);
+            debugPrint('📄 Chargement de l\'ancien format');
+          }
+          
+          if (cardsData.isNotEmpty) {
+            debugPrint('✅ Collection trouvée: ${cardsData.length} cartes');
+            debugPrint('🔍 Aperçu des cartes: ${cardsData.entries.take(5).map((e) => "${e.key}: ${e.value}").join(", ")}...');
+            
+            // Charger les données dans la collection locale
+            _clearLocalCollection();
+            cardsData.forEach((cardName, quantity) {
+              _collection.setCardQuantity(cardName, quantity);
+            });
+            _notifyCollectionChanged();
+          } else {
+            debugPrint('📄 Collection vide trouvée');
+            _clearLocalCollection();
+            _notifyCollectionChanged();
+          }
         }
       } else {
         debugPrint('📄 Nouveau utilisateur - collection vide');
@@ -124,16 +157,20 @@ class CollectionService {
           .collection('users')
           .doc(user.uid);
       
-      // Pour éviter les problèmes avec les cartes supprimées, on remplace complètement le champ 'cards'
-      // au lieu d'utiliser merge: true
+      // Convertir la collection plate en structure organisée
+      final structuredCollection = StructuredCollection.fromFlat(_collection.collection);
+      final structuredData = structuredCollection.toFirestore();
+      
+      // Sauvegarder à la fois l'ancien format (pour compatibilité) et le nouveau
       await userDoc.update({
-        'cards': _collection.collection,
+        'cards': _collection.collection, // Format ancien pour compatibilité
+        'structuredCards': structuredData, // Nouvelle structure organisée
         'lastUpdated': FieldValue.serverTimestamp(),
         'lastSeen': FieldValue.serverTimestamp(),
       });
       
       debugPrint('✅ Collection sauvegardée avec ${_collection.collection.length} cartes');
-      debugPrint('🔍 Cartes actuelles: ${_collection.collection.entries.where((e) => e.value > 0).take(3).map((e) => "${e.key}: ${e.value}").join(", ")}...');
+      debugPrint('🏗️ Structure organisée: ${structuredData.keys.join(", ")}');
       
     } catch (e) {
       debugPrint('❌ Erreur lors de la sauvegarde: $e');
@@ -146,8 +183,12 @@ class CollectionService {
             .collection('users')
             .doc(user.uid);
         
+        final structuredCollection = StructuredCollection.fromFlat(_collection.collection);
+        final structuredData = structuredCollection.toFirestore();
+        
         await userDoc.set({
           'cards': _collection.collection,
+          'structuredCards': structuredData,
           'lastUpdated': FieldValue.serverTimestamp(),
           'email': user.email,
           'displayName': user.displayName,
