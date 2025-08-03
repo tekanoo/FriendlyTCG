@@ -34,23 +34,18 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
       displayName: cardName.replaceAll('.png', ''),
     )).toList();
     
-    // Trier les cartes par ordre alphabétique du nom d'affichage
-    cards.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    // Les cartes sont déjà triées par le service avec le tri intelligent
   }
 
   List<CardModel> get filteredCards {
-    List<CardModel> filtered;
     if (searchQuery.isEmpty) {
-      filtered = cards;
+      return cards; // Déjà triées par le service
     } else {
-      filtered = cards.where((card) =>
+      // Filtrer et garder l'ordre original (qui est déjà le bon tri)
+      return cards.where((card) =>
         card.displayName.toLowerCase().contains(searchQuery.toLowerCase())
       ).toList();
     }
-    
-    // Trier les cartes filtrées par ordre alphabétique
-    filtered.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
-    return filtered;
   }
 
   List<CardModel> get currentPageCards {
