@@ -35,7 +35,7 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
       displayName: cardName.replaceAll('.png', ''),
     )).toList();
     
-    // Les cartes sont déjà triées par le service avec le tri intelligent
+    // Les cartes sont déjà triées alphabétiquement dans le fichier généré
   }
 
   List<CardModel> get filteredCards {
@@ -48,12 +48,18 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
       ).toList();
     }
     
-    // Appliquer le tri
-    result.sort((a, b) {
-      return _sortAscending 
-          ? a.displayName.compareTo(b.displayName)
-          : b.displayName.compareTo(a.displayName);
-    });
+    // Pour la recherche, trier alphabétiquement
+    // Pour l'affichage normal, conserver l'ordre du fichier généré
+    if (searchQuery.isNotEmpty) {
+      result.sort((a, b) {
+        return _sortAscending 
+            ? a.displayName.compareTo(b.displayName)
+            : b.displayName.compareTo(a.displayName);
+      });
+    } else if (!_sortAscending) {
+      // Si tri descendant demandé, simplement inverser l'ordre du fichier généré
+      result = result.reversed.toList();
+    }
     
     return result;
   }

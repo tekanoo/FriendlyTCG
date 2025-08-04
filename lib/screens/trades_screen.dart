@@ -7,6 +7,7 @@ import '../models/user_with_location.dart';
 import '../models/user_model.dart';
 import '../models/extension_model.dart';
 import '../models/game_model.dart';
+import '../widgets/adaptive_card_grid.dart';
 import 'trade_offer_screen.dart';
 import 'my_trades_screen.dart';
 
@@ -739,16 +740,13 @@ class _TradesScreenState extends State<TradesScreen> {
   }
 
   Widget _buildCardGrid() {
-    // Les cartes sont déjà dans le bon ordre depuis le fichier généré
+    // Utiliser l'ordre alphabétique du fichier généré directement
     List<String> sortedCards = List.from(_availableCards);
     
-    // Appliquer le tri alphabétique seulement si l'utilisateur l'a demandé
-    // Par défaut, on garde l'ordre intelligent du fichier généré
+    // Appliquer seulement l'inversion si demandée par l'utilisateur
     if (!_sortAscending) {
-      // Si tri descendant demandé, inverser l'ordre
       sortedCards = sortedCards.reversed.toList();
     }
-    // Si _sortAscending est true, on garde l'ordre du fichier généré (tri intelligent)
 
     // Application du filtre
     final filteredCards = _getFilteredCards(sortedCards);
@@ -802,15 +800,15 @@ class _TradesScreenState extends State<TradesScreen> {
             ],
           ),
         ),
-        // Grille des cartes 3x3
+        // Grille des cartes avec taille adaptée comme les collections
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.7, // Ratio adapté pour les cartes
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: CardAspectRatioCalculator.calculate(context),
             ),
             itemCount: filteredCards.length,
             itemBuilder: (context, index) {
