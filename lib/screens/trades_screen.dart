@@ -739,13 +739,16 @@ class _TradesScreenState extends State<TradesScreen> {
   }
 
   Widget _buildCardGrid() {
-    // Tri des cartes
+    // Les cartes sont déjà dans le bon ordre depuis le fichier généré
     List<String> sortedCards = List.from(_availableCards);
-    sortedCards.sort((a, b) {
-      String nameA = a.replaceAll('.png', '');
-      String nameB = b.replaceAll('.png', '');
-      return _sortAscending ? nameA.compareTo(nameB) : nameB.compareTo(nameA);
-    });
+    
+    // Appliquer le tri alphabétique seulement si l'utilisateur l'a demandé
+    // Par défaut, on garde l'ordre intelligent du fichier généré
+    if (!_sortAscending) {
+      // Si tri descendant demandé, inverser l'ordre
+      sortedCards = sortedCards.reversed.toList();
+    }
+    // Si _sortAscending est true, on garde l'ordre du fichier généré (tri intelligent)
 
     // Application du filtre
     final filteredCards = _getFilteredCards(sortedCards);
@@ -799,14 +802,20 @@ class _TradesScreenState extends State<TradesScreen> {
             ],
           ),
         ),
-        // Liste des cartes
+        // Grille des cartes 3x3
         Expanded(
-          child: ListView.builder(
+          child: GridView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.7, // Ratio adapté pour les cartes
+            ),
             itemCount: filteredCards.length,
             itemBuilder: (context, index) {
               final cardImageName = filteredCards[index];
-              return _buildCardTile(cardImageName);
+              return _buildCardGridItem(cardImageName);
             },
           ),
         ),
@@ -829,7 +838,7 @@ class _TradesScreenState extends State<TradesScreen> {
     return filteredCards;
   }
 
-  Widget _buildCardTile(String cardImageName) {
+  Widget _buildCardGridItem(String cardImageName) {
     final cardPath = AutoGameService.getCardImagePath(_selectedExtension!.id, cardImageName);
     final displayName = cardImageName.replaceAll('.png', '');
     final isSelected = _selectedCards.contains(cardImageName);
@@ -840,94 +849,121 @@ class _TradesScreenState extends State<TradesScreen> {
         final quantity = snapshot.data ?? 0;
         final hasCard = quantity > 0;
         
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: InkWell(
-            onTap: () => _toggleCardSelection(cardImageName),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  // Image de la carte
-                  Container(
-                    width: 50,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isSelected ? Colors.green : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Image.asset(
-                        cardPath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey.shade300,
-                            child: const Icon(Icons.image_not_supported),
-                          );
-                        },
-                      ),
+        return InkWell(
+          onTap: () => _toggleCardSelection(cardImageName),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? Colors.green : Colors.grey.shade300,
+                width: isSelected ? 3 : 1,
+              ),
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: Colors.green.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ] : [],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Image de la carte (partie principale)
+                Expanded(
+                  flex: 4,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                    child: Image.asset(
+                      cardPath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey.shade400,
+                            size: 40,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  
-                  // Informations de la carte
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          displayName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
-                          ),
+                ),
+                
+                // Informations de la carte (partie inférieure)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.green.shade50 : Colors.white,
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                  ),
+                  child: Column(
+                    children: [
+                      // Nom de la carte (tronqué si nécessaire)
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 10,
+                          color: isSelected ? Colors.green.shade800 : Colors.black87,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              hasCard ? Icons.check_circle : Icons.radio_button_unchecked,
-                              size: 16,
-                              color: hasCard ? Colors.green : Colors.grey,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              hasCard ? 'Possédée ($quantity)' : 'Non possédée',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: hasCard ? Colors.green : Colors.grey.shade600,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      
+                      // Statut de possession et sélection
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Indicateur de possession
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                hasCard ? Icons.check_circle : Icons.radio_button_unchecked,
+                                size: 12,
+                                color: hasCard ? Colors.green : Colors.grey,
+                              ),
+                              if (hasCard && quantity > 0) ...[
+                                const SizedBox(width: 2),
+                                Text(
+                                  '$quantity',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          
+                          // Indicateur de sélection
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSelected ? Colors.green : Colors.transparent,
+                              border: Border.all(
+                                color: isSelected ? Colors.green : Colors.grey.shade400,
+                                width: 1,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Indicateur de sélection
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isSelected ? Colors.green : Colors.transparent,
-                      border: Border.all(
-                        color: isSelected ? Colors.green : Colors.grey.shade400,
-                        width: 2,
+                            child: isSelected
+                                ? const Icon(Icons.check, color: Colors.white, size: 12)
+                                : null,
+                          ),
+                        ],
                       ),
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 20)
-                        : null,
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

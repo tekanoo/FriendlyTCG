@@ -66,62 +66,8 @@ class AutoGameService {
   
   /// Obtient les cartes pour une extension
   static List<String> getCardsForExtension(String extensionId) {
-    final cards = GeneratedCardsList.getCardsByExtensionId(extensionId);
-    // Trier les cartes avec un tri intelligent (numérique + alphabétique)
-    cards.sort(_smartCardSort);
-    return cards;
-  }
-  
-  /// Tri intelligent des cartes : prend en compte les numéros dans les noms de fichiers
-  static int _smartCardSort(String a, String b) {
-    // Cas spécial pour les cartes Pokémon avec format SV8pt5_FR_X.png
-    final pokemonRegex = RegExp(r'SV\d+pt\d+_FR_(\d+)\.png');
-    final pokemonMatchA = pokemonRegex.firstMatch(a);
-    final pokemonMatchB = pokemonRegex.firstMatch(b);
-    
-    if (pokemonMatchA != null && pokemonMatchB != null) {
-      final numberA = int.parse(pokemonMatchA.group(1)!);
-      final numberB = int.parse(pokemonMatchB.group(1)!);
-      return numberA.compareTo(numberB);
-    }
-    
-    // Cas spécial pour les cartes Gundam avec format GD01-XXX
-    final gundamRegex = RegExp(r'GD\d+-(\d+)');
-    final gundamMatchA = gundamRegex.firstMatch(a);
-    final gundamMatchB = gundamRegex.firstMatch(b);
-    
-    if (gundamMatchA != null && gundamMatchB != null) {
-      final numberA = int.parse(gundamMatchA.group(1)!);
-      final numberB = int.parse(gundamMatchB.group(1)!);
-      return numberA.compareTo(numberB);
-    }
-    
-    // Tri général basé sur les numéros extraits
-    final aNumbers = _extractNumbers(a);
-    final bNumbers = _extractNumbers(b);
-    
-    // Si les deux ont des numéros au même endroit, comparer numériquement
-    for (int i = 0; i < aNumbers.length && i < bNumbers.length; i++) {
-      if (aNumbers[i] != bNumbers[i]) {
-        return aNumbers[i].compareTo(bNumbers[i]);
-      }
-    }
-    
-    // Si une carte a plus de numéros, elle vient après
-    if (aNumbers.length != bNumbers.length) {
-      return aNumbers.length.compareTo(bNumbers.length);
-    }
-    
-    // Sinon, tri alphabétique standard
-    return a.toLowerCase().compareTo(b.toLowerCase());
-  }
-  
-  /// Extrait tous les nombres d'une chaîne de caractères
-  static List<int> _extractNumbers(String input) {
-    final RegExp numberRegex = RegExp(r'\d+');
-    return numberRegex.allMatches(input)
-        .map((match) => int.parse(match.group(0)!))
-        .toList();
+    // Les cartes sont déjà triées dans le fichier généré
+    return GeneratedCardsList.getCardsByExtensionId(extensionId);
   }
   
   /// Obtient le chemin complet d'une carte
@@ -172,12 +118,10 @@ class AutoGameService {
   }
   
   static String _getExtensionImagePath(String gameName, String extensionName) {
-    // Retourner la première carte de l'extension (tri intelligent)
+    // Retourner la première carte de l'extension (déjà triée dans le fichier généré)
     final cards = GeneratedCardsList.getCardsByExtensionId(extensionName);
     if (cards.isNotEmpty) {
-      // Trier les cartes avec le tri intelligent pour avoir la vraie première
-      final sortedCards = cards.toList()..sort(_smartCardSort);
-      return GeneratedCardsList.getCardPath(extensionName, sortedCards.first);
+      return GeneratedCardsList.getCardPath(extensionName, cards.first);
     }
     return 'assets/images/$gameName/$extensionName/cover.png';
   }
