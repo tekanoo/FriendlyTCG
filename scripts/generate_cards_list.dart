@@ -44,8 +44,9 @@ void main() {
           .whereType<File>()
           .where((file) => file.path.toLowerCase().endsWith('.png'))
           .map((file) => file.path.split(Platform.pathSeparator).last)
-          .toList()
-        ..sort();
+          .toList();
+      
+      cardFiles.sort(_smartCardSort);
       
       print('   📋 ${cardFiles.length} cartes trouvées');
       
@@ -137,8 +138,137 @@ void main() {
   }
 }
 
+/// Tri intelligent des cartes : prend en compte les numéros dans les noms de fichiers
+int _smartCardSort(String a, String b) {
+  // Cas spécial pour les cartes Pokémon avec format SV8pt5_FR_X.png
+  final pokemonRegex = RegExp(r'SV\d+pt\d+_FR_(\d+)');
+  final pokemonMatchA = pokemonRegex.firstMatch(a);
+  final pokemonMatchB = pokemonRegex.firstMatch(b);
+  
+  if (pokemonMatchA != null && pokemonMatchB != null) {
+    final numberA = int.parse(pokemonMatchA.group(1)!);
+    final numberB = int.parse(pokemonMatchB.group(1)!);
+    return numberA.compareTo(numberB);
+  }
+  
+  // Cas spécial pour les cartes Gundam - trier par ordre alphabétique des préfixes
+  final prefixA = _extractGundamPrefix(a);
+  final prefixB = _extractGundamPrefix(b);
+  
+  if (prefixA != null && prefixB != null) {
+    // Si les préfixes sont différents, trier par ordre alphabétique
+    if (prefixA != prefixB) {
+      return prefixA.compareTo(prefixB);
+    }
+    
+    // Même préfixe, trier par numéro
+    final numberA = _extractGundamNumber(a);
+    final numberB = _extractGundamNumber(b);
+    
+    if (numberA != null && numberB != null) {
+      if (numberA != numberB) {
+        return numberA.compareTo(numberB);
+      }
+      
+      // Même numéro de base, gérer les variantes
+      final variantA = _extractVariantSuffix(a);
+      final variantB = _extractVariantSuffix(b);
+      
+      // Ordre: carte de base, puis variantes, puis autres suffixes
+      if (variantA.isEmpty && variantB.isNotEmpty) return -1;
+      if (variantA.isNotEmpty && variantB.isEmpty) return 1;
+      
+      return variantA.compareTo(variantB);
+    }
+  }
+  
+  // Tri général basé sur les numéros extraits
+  final aNumbers = _extractNumbers(a);
+  final bNumbers = _extractNumbers(b);
+  
+  // Si les deux ont des numéros au même endroit, comparer numériquement
+  for (int i = 0; i < aNumbers.length && i < bNumbers.length; i++) {
+    if (aNumbers[i] != bNumbers[i]) {
+      return aNumbers[i].compareTo(bNumbers[i]);
+    }
+  }
+  
+  // Si une carte a plus de numéros, elle vient après
+  if (aNumbers.length != bNumbers.length) {
+    return aNumbers.length.compareTo(bNumbers.length);
+  }
+  
+  // Sinon, tri alphabétique standard
+  return a.toLowerCase().compareTo(b.toLowerCase());
+}
+
+/// Extrait le préfixe d'une carte Gundam (GD01, EXB, EXR, R, T)
+String? _extractGundamPrefix(String cardName) {
+  final patterns = [
+    RegExp(r'^(GD\d+)-'),
+    RegExp(r'^(EXB)-'),
+    RegExp(r'^(EXR)-'),
+    RegExp(r'^(R)-'),
+    RegExp(r'^(T)-'),
+  ];
+  
+  for (final pattern in patterns) {
+    final match = pattern.firstMatch(cardName);
+    if (match != null) {
+      return match.group(1);
+    }
+  }
+  return null;
+}
+
+/// Extrait le numéro principal d'une carte Gundam
+int? _extractGundamNumber(String cardName) {
+  final patterns = [
+    RegExp(r'GD\d+-(\d+)'),
+    RegExp(r'EXB-(\d+)'),
+    RegExp(r'EXR-(\d+)'),
+    RegExp(r'R-(\d+)'),
+    RegExp(r'T-(\d+)'),
+  ];
+  
+  for (final pattern in patterns) {
+    final match = pattern.firstMatch(cardName);
+    if (match != null) {
+      return int.parse(match.group(1)!);
+    }
+  }
+  return null;
+}
+
+/// Extrait le suffixe variant/spécial d'une carte
+String _extractVariantSuffix(String cardName) {
+  final patterns = [
+    RegExp(r'_Variante_P(\d+)'),
+    RegExp(r'_p(\d+)'),
+    RegExp(r'-(\d+x)'),
+  ];
+  
+  for (final pattern in patterns) {
+    final match = pattern.firstMatch(cardName);
+    if (match != null) {
+      return match.group(0)!;
+    }
+  }
+  return '';
+}
+
+/// Extrait tous les nombres d'une chaîne de caractères
+List<int> _extractNumbers(String input) {
+  final RegExp numberRegex = RegExp(r'\d+');
+  return numberRegex.allMatches(input)
+      .map((match) => int.parse(match.group(0)!))
+      .toList();
+}
+
 String _toMethodName(String extensionName) {
   // Convertir le nom d'extension en nom de méthode valide
-  return 'get${extensionName.split('_').map((word) => 
+  // Remplacer les tirets par des underscores, puis traiter normalement
+  final cleanName = extensionName.replaceAll('-', '_');
+  return 'get${cleanName.split('_').map((word) => 
     word[0].toUpperCase() + word.substring(1).toLowerCase()).join('')}Cards';
 }

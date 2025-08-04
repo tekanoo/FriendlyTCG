@@ -69,15 +69,6 @@ class AutoGameService {
     final cards = GeneratedCardsList.getCardsByExtensionId(extensionId);
     // Trier les cartes avec un tri intelligent (numérique + alphabétique)
     cards.sort(_smartCardSort);
-    
-    // Debug: afficher les 10 premières cartes pour vérifier le tri
-    if (extensionId == 'prismatic-evolutions' && cards.isNotEmpty) {
-      print('DEBUG - Tri des cartes Pokémon (10 premières):');
-      for (int i = 0; i < 10 && i < cards.length; i++) {
-        print('  ${i + 1}: ${cards[i]}');
-      }
-    }
-    
     return cards;
   }
   
