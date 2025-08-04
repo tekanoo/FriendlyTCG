@@ -8,6 +8,7 @@ import '../models/user_model.dart';
 import '../models/extension_model.dart';
 import '../models/game_model.dart';
 import '../widgets/adaptive_card_grid.dart';
+import '../widgets/pagination_controls.dart';
 import 'trade_offer_screen.dart';
 import 'my_trades_screen.dart';
 
@@ -37,6 +38,10 @@ class _TradesScreenState extends State<TradesScreen> {
   
   // Tri des cartes
   bool _sortAscending = true;
+  
+  // Pagination comme TCG
+  int _currentPage = 0;
+  static const int _cardsPerPage = 9; // 3x3 grille
   
   // Filtre des cartes
   bool _showOnlyUnowned = false;
@@ -750,40 +755,32 @@ class _TradesScreenState extends State<TradesScreen> {
 
     // Application du filtre
     final filteredCards = _getFilteredCards(sortedCards);
+    
+    // Pagination comme TCG
+    final totalPages = (filteredCards.length / _cardsPerPage).ceil();
+    final startIndex = _currentPage * _cardsPerPage;
+    final endIndex = (startIndex + _cardsPerPage).clamp(0, filteredCards.length);
+    final currentPageCards = startIndex >= filteredCards.length 
+        ? <String>[]
+        : filteredCards.sublist(startIndex, endIndex);
 
     return Column(
       children: [
+        // Header avec informations et pagination (comme TCG)
+        PageHeader(
+          totalItems: filteredCards.length,
+          currentPage: _currentPage,
+          totalPages: totalPages,
+          itemName: 'cartes',
+          subtitle: _selectedExtension?.description ?? '',
+        ),
+        
         // Header avec tri et filtre
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Cartes (${filteredCards.length}${_showOnlyUnowned ? ' non possédées' : ''})',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _sortAscending = !_sortAscending;
-                          });
-                        },
-                        icon: Icon(_sortAscending ? Icons.sort_by_alpha : Icons.sort_by_alpha_outlined),
-                        tooltip: _sortAscending ? 'Tri Z-A' : 'Tri A-Z',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               Row(
                 children: [
                   Checkbox(
@@ -791,33 +788,171 @@ class _TradesScreenState extends State<TradesScreen> {
                     onChanged: (value) {
                       setState(() {
                         _showOnlyUnowned = value ?? false;
+                        _currentPage = 0; // Reset pagination
                       });
                     },
                   ),
                   const Text('Afficher uniquement les cartes non possédées'),
                 ],
               ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _sortAscending = !_sortAscending;
+                    _currentPage = 0; // Reset pagination
+                  });
+                },
+                icon: Icon(_sortAscending ? Icons.sort_by_alpha : Icons.sort_by_alpha_outlined),
+                tooltip: _sortAscending ? 'Tri Z-A' : 'Tri A-Z',
+              ),
             ],
           ),
         ),
-        // Grille des cartes avec taille adaptée comme les collections
+        
+        // Grille des cartes (exactement comme TCG)
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: CardAspectRatioCalculator.calculate(context),
-            ),
-            itemCount: filteredCards.length,
-            itemBuilder: (context, index) {
-              final cardImageName = filteredCards[index];
-              return _buildCardGridItem(cardImageName);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final aspectRatio = CardAspectRatioCalculator.calculate(context);
+              
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200), // Même config que TCG
+                  child: GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, // 3x3 comme TCG
+                      childAspectRatio: aspectRatio,
+                      crossAxisSpacing: 12, // Même espacement que TCG
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: currentPageCards.length,
+                    itemBuilder: (context, index) {
+                      final cardImageName = currentPageCards[index];
+                      return _buildTCGStyleCardTile(cardImageName); // Nouveau style TCG
+                    },
+                  ),
+                ),
+              );
             },
           ),
         ),
+        
+        // Contrôles de pagination (comme TCG)
+        PaginationControls(
+          currentPage: _currentPage,
+          totalPages: totalPages,
+          onPreviousPage: _goToPreviousPage,
+          onNextPage: _goToNextPage,
+          primaryColor: Colors.blue,
+          label: 'Échanges',
+        ),
       ],
+    );
+  }
+
+  void _goToNextPage() {
+    final totalPages = ((_getFilteredCards(_availableCards)).length / _cardsPerPage).ceil();
+    if (_currentPage < totalPages - 1) {
+      setState(() {
+        _currentPage++;
+      });
+    }
+  }
+
+  void _goToPreviousPage() {
+    if (_currentPage > 0) {
+      setState(() {
+        _currentPage--;
+      });
+    }
+  }
+
+  // Nouveau style de carte identique à TCG
+  Widget _buildTCGStyleCardTile(String cardImageName) {
+    final cardPath = AutoGameService.getCardImagePath(_selectedExtension!.id, cardImageName);
+    final displayName = cardImageName.replaceAll('.png', '');
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.all(2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Image de la carte (cliquable) - style TCG
+          Expanded(
+            flex: 5,
+            child: GestureDetector(
+              onTap: () => _toggleCardSelection(cardImageName),
+              child: Container(
+                margin: const EdgeInsets.all(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.asset(
+                    cardPath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          // Nom de la carte
+          Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+            child: Text(
+              displayName,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          
+          // Status de sélection
+          Container(
+            height: 24,
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: _selectedCards.contains(cardImageName) 
+                ? Colors.green[50] 
+                : Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _selectedCards.contains(cardImageName) 
+                  ? Colors.green 
+                  : Colors.grey[300]!,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                _selectedCards.contains(cardImageName) ? 'Sélectionnée' : 'Sélectionner',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: _selectedCards.contains(cardImageName) 
+                    ? Colors.green[700] 
+                    : Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -834,138 +969,5 @@ class _TradesScreenState extends State<TradesScreen> {
       }
     }
     return filteredCards;
-  }
-
-  Widget _buildCardGridItem(String cardImageName) {
-    final cardPath = AutoGameService.getCardImagePath(_selectedExtension!.id, cardImageName);
-    final displayName = cardImageName.replaceAll('.png', '');
-    final isSelected = _selectedCards.contains(cardImageName);
-
-    return StreamBuilder<int>(
-      stream: _collectionService.getCardQuantityStream(cardImageName),
-      builder: (context, snapshot) {
-        final quantity = snapshot.data ?? 0;
-        final hasCard = quantity > 0;
-        
-        return InkWell(
-          onTap: () => _toggleCardSelection(cardImageName),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isSelected ? Colors.green : Colors.grey.shade300,
-                width: isSelected ? 3 : 1,
-              ),
-              boxShadow: isSelected ? [
-                BoxShadow(
-                  color: Colors.green.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ] : [],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Image de la carte (partie principale)
-                Expanded(
-                  flex: 4,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                    child: Image.asset(
-                      cardPath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey.shade200,
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey.shade400,
-                            size: 40,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                
-                // Informations de la carte (partie inférieure)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.green.shade50 : Colors.white,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
-                  ),
-                  child: Column(
-                    children: [
-                      // Nom de la carte (tronqué si nécessaire)
-                      Text(
-                        displayName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 10,
-                          color: isSelected ? Colors.green.shade800 : Colors.black87,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      
-                      // Statut de possession et sélection
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Indicateur de possession
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                hasCard ? Icons.check_circle : Icons.radio_button_unchecked,
-                                size: 12,
-                                color: hasCard ? Colors.green : Colors.grey,
-                              ),
-                              if (hasCard && quantity > 0) ...[
-                                const SizedBox(width: 2),
-                                Text(
-                                  '$quantity',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          
-                          // Indicateur de sélection
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isSelected ? Colors.green : Colors.transparent,
-                              border: Border.all(
-                                color: isSelected ? Colors.green : Colors.grey.shade400,
-                                width: 1,
-                              ),
-                            ),
-                            child: isSelected
-                                ? const Icon(Icons.check, color: Colors.white, size: 12)
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 }
