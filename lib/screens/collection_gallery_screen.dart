@@ -3,7 +3,6 @@ import '../models/extension_model.dart';
 import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
-import '../widgets/adaptive_card_grid.dart';
 
 class CollectionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -159,22 +158,23 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
             subtitle: 'Cartes grisées : non possédées',
           ),
           
-          // Grille de cartes (adaptative)
+          // Grille de cartes (3x3 centré)
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final aspectRatio = CardAspectRatioCalculator.calculate(context);
+                // Utiliser un ratio fixe plus petit pour des cartes plus compactes
+                const aspectRatio = 0.7; // Cartes plus hautes que larges
                 
                 return Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1200),
+                    constraints: const BoxConstraints(maxWidth: 900), // Largeur réduite pour centrer
                     child: GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, // 3x3 grille
                         childAspectRatio: aspectRatio,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
                       ),
                       itemCount: currentPageCards.length,
                       itemBuilder: (context, index) {
