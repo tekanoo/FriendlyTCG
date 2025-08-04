@@ -3,6 +3,7 @@ import '../models/extension_model.dart';
 import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
+import '../widgets/adaptive_card_grid.dart';
 
 class CollectionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -158,23 +159,22 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
             subtitle: 'Cartes grisées : non possédées',
           ),
           
-          // Grille de cartes (3x3 centré)
+          // Grille de cartes (même taille que TCG et Échanges)
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // Utiliser un ratio fixe plus petit pour des cartes plus compactes
-                const aspectRatio = 0.7; // Cartes plus hautes que larges
+                final aspectRatio = CardAspectRatioCalculator.calculate(context);
                 
                 return Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900), // Largeur réduite pour centrer
+                    constraints: const BoxConstraints(maxWidth: 1200), // Même config que TCG
                     child: GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3, // 3x3 grille
-                        childAspectRatio: aspectRatio,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
+                        childAspectRatio: aspectRatio, // Même ratio que TCG et Échanges
+                        crossAxisSpacing: 12, // Même espacement que TCG
+                        mainAxisSpacing: 12,
                       ),
                       itemCount: currentPageCards.length,
                       itemBuilder: (context, index) {
