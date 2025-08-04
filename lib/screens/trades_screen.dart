@@ -7,7 +7,6 @@ import '../models/user_with_location.dart';
 import '../models/user_model.dart';
 import '../models/extension_model.dart';
 import '../models/game_model.dart';
-import '../widgets/card_tile_widget.dart';
 import 'trade_offer_screen.dart';
 import 'my_trades_screen.dart';
 
@@ -34,6 +33,9 @@ class _TradesScreenState extends State<TradesScreen> {
   
   // Étapes de sélection
   int _currentStep = 0; // 0: jeu, 1: extension, 2: cartes
+  
+  // Tri des cartes
+  bool _sortAscending = true;
 
   @override
   void initState() {
@@ -734,36 +736,88 @@ class _TradesScreenState extends State<TradesScreen> {
   }
 
   Widget _buildCardGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 0.7,
-      ),
-      itemCount: _availableCards.length,
-      itemBuilder: (context, index) {
-        final cardImageName = _availableCards[index];
-        final cardPath = AutoGameService.getCardImagePath(_selectedExtension!.id, cardImageName);
-        final displayName = cardImageName.replaceAll('.png', '');
-        final isSelected = _selectedCards.contains(cardImageName);
-        
-        String subtitle = 'Extension: ${_selectedExtension!.name}';
-        
-        return StreamBuilder<int>(
-          stream: _collectionService.getCardQuantityStream(cardImageName),
-          builder: (context, snapshot) {
-            return CardTileWidget(
-              cardName: displayName,
-              imagePath: cardPath,
-              subtitle: subtitle,
-              isSelected: isSelected,
-              onTap: () => _toggleCardSelection(cardImageName),
-            );
-          },
-        );
-      },
+    // Tri des cartes
+    List<String> sortedCards = List.from(_availableCards);
+    sortedCards.sort((a, b) {
+      String nameA = a.replaceAll('.png', '');
+      String nameB = b.replaceAll('.png', '');
+      return _sortAscending ? nameA.compareTo(nameB) : nameB.compareTo(nameA);
+    });
+
+    return Column(
+      children: [
+        // Bouton de tri
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Cartes (${sortedCards.length})',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _sortAscending = !_sortAscending;
+                  });
+                },
+                icon: Icon(_sortAscending ? Icons.sort_by_alpha : Icons.sort_by_alpha_outlined),
+                tooltip: _sortAscending ? 'Tri Z-A' : 'Tri A-Z',
+              ),
+            ],
+          ),
+        ),
+        // Liste des cartes
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: sortedCards.length,
+            itemBuilder: (context, index) {
+              final cardImageName = sortedCards[index];
+              final cardPath = AutoGameService.getCardImagePath(_selectedExtension!.id, cardImageName);
+              final displayName = cardImageName.replaceAll('.png', '');
+              final isSelected = _selectedCards.contains(cardImageName);
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.asset(
+                      cardPath,
+                      width: 40,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 40,
+                          height: 56,
+                          color: Colors.grey.shade300,
+                          child: const Icon(Icons.image_not_supported),
+                        );
+                      },
+                    ),
+                  ),
+                  title: Text(
+                    displayName,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+                  onTap: () => _toggleCardSelection(cardImageName),
+                  selected: isSelected,
+                  selectedColor: Colors.green.shade50,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

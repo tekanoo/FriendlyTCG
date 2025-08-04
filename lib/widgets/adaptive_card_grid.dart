@@ -16,6 +16,18 @@ class AdaptiveCardGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Calculer le nombre de colonnes basé sur la largeur
+        int crossAxisCount;
+        if (constraints.maxWidth > 1200) {
+          crossAxisCount = 4; // Écrans très larges
+        } else if (constraints.maxWidth > 800) {
+          crossAxisCount = 3; // Écrans larges (tablet/desktop)
+        } else if (constraints.maxWidth > 600) {
+          crossAxisCount = 2; // Écrans moyens (petites tablettes)
+        } else {
+          crossAxisCount = 1; // Mobiles
+        }
+        
         // Calculer le ratio optimal basé sur la hauteur disponible
         final screenHeight = MediaQuery.of(context).size.height;
         final appBarHeight = kToolbarHeight + MediaQuery.of(context).padding.top + 60; // AppBar + SearchBar
@@ -23,10 +35,10 @@ class AdaptiveCardGrid extends StatelessWidget {
         final headerHeight = 80.0; // Hauteur approximative du header
         final availableHeight = screenHeight - appBarHeight - paginationHeight - headerHeight;
         
-        // Calculer l'aspect ratio pour que 3 lignes tiennent dans la hauteur disponible
+        // Calculer l'aspect ratio pour que les lignes tiennent dans la hauteur disponible
         final itemHeight = (availableHeight - (2 * 12) - (padding?.vertical ?? 32)) / 3; // 3 lignes + espacing
-        final itemWidth = (constraints.maxWidth - (2 * 12) - (padding?.horizontal ?? 48)) / 3; // 3 colonnes + espacing
-        final aspectRatio = (itemWidth / itemHeight).clamp(0.6, 0.8); // Limiter le ratio
+        final itemWidth = (constraints.maxWidth - (2 * 12) - (padding?.horizontal ?? 48)) / crossAxisCount;
+        final aspectRatio = (itemWidth / itemHeight).clamp(0.6, 1.2); // Limiter le ratio
         
         return Center(
           child: ConstrainedBox(
@@ -34,7 +46,7 @@ class AdaptiveCardGrid extends StatelessWidget {
             child: GridView.builder(
               padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
+                crossAxisCount: crossAxisCount,
                 childAspectRatio: aspectRatio,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,

@@ -22,6 +22,7 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   String searchQuery = '';
   int currentPage = 0;
   static const int cardsPerPage = 9; // 3x3 grille
+  bool _sortAscending = true;
 
   @override
   void initState() {
@@ -37,14 +38,23 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   }
 
   List<CardModel> get filteredCards {
+    List<CardModel> result;
     if (searchQuery.isEmpty) {
-      return cards; // Déjà triées par le service
+      result = List.from(cards);
     } else {
-      // Filtrer et garder l'ordre original (qui est déjà le bon tri)
-      return cards.where((card) =>
+      result = cards.where((card) =>
         card.displayName.toLowerCase().contains(searchQuery.toLowerCase())
       ).toList();
     }
+    
+    // Appliquer le tri
+    result.sort((a, b) {
+      return _sortAscending 
+          ? a.displayName.compareTo(b.displayName)
+          : b.displayName.compareTo(a.displayName);
+    });
+    
+    return result;
   }
 
   List<CardModel> get currentPageCards {
@@ -93,19 +103,40 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
           preferredSize: const Size.fromHeight(60),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              onChanged: (value) {
-                _onSearchChanged(value);
-              },
-              decoration: InputDecoration(
-                hintText: 'Rechercher une carte...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) {
+                      _onSearchChanged(value);
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Rechercher une carte...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
                 ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _sortAscending = !_sortAscending;
+                      currentPage = 0; // Retour à la première page après tri
+                    });
+                  },
+                  icon: Icon(_sortAscending ? Icons.sort_by_alpha : Icons.sort_by_alpha_outlined),
+                  tooltip: _sortAscending ? 'Tri Z-A' : 'Tri A-Z',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
