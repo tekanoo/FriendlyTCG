@@ -69,12 +69,43 @@ class AutoGameService {
     final cards = GeneratedCardsList.getCardsByExtensionId(extensionId);
     // Trier les cartes avec un tri intelligent (numérique + alphabétique)
     cards.sort(_smartCardSort);
+    
+    // Debug: afficher les 10 premières cartes pour vérifier le tri
+    if (extensionId == 'prismatic-evolutions' && cards.isNotEmpty) {
+      print('DEBUG - Tri des cartes Pokémon (10 premières):');
+      for (int i = 0; i < 10 && i < cards.length; i++) {
+        print('  ${i + 1}: ${cards[i]}');
+      }
+    }
+    
     return cards;
   }
   
   /// Tri intelligent des cartes : prend en compte les numéros dans les noms de fichiers
   static int _smartCardSort(String a, String b) {
-    // Extraire les parties numériques des noms de fichiers
+    // Cas spécial pour les cartes Pokémon avec format SV8pt5_FR_X.png
+    final pokemonRegex = RegExp(r'SV\d+pt\d+_FR_(\d+)\.png');
+    final pokemonMatchA = pokemonRegex.firstMatch(a);
+    final pokemonMatchB = pokemonRegex.firstMatch(b);
+    
+    if (pokemonMatchA != null && pokemonMatchB != null) {
+      final numberA = int.parse(pokemonMatchA.group(1)!);
+      final numberB = int.parse(pokemonMatchB.group(1)!);
+      return numberA.compareTo(numberB);
+    }
+    
+    // Cas spécial pour les cartes Gundam avec format GD01-XXX
+    final gundamRegex = RegExp(r'GD\d+-(\d+)');
+    final gundamMatchA = gundamRegex.firstMatch(a);
+    final gundamMatchB = gundamRegex.firstMatch(b);
+    
+    if (gundamMatchA != null && gundamMatchB != null) {
+      final numberA = int.parse(gundamMatchA.group(1)!);
+      final numberB = int.parse(gundamMatchB.group(1)!);
+      return numberA.compareTo(numberB);
+    }
+    
+    // Tri général basé sur les numéros extraits
     final aNumbers = _extractNumbers(a);
     final bNumbers = _extractNumbers(b);
     
