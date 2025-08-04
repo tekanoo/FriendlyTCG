@@ -40,19 +40,21 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   List<CardModel> get filteredCards {
     List<CardModel> result;
     if (searchQuery.isEmpty) {
+      // Quand pas de recherche, respecter l'ordre du fichier généré
       result = List.from(cards);
     } else {
+      // Lors d'une recherche, filtrer puis trier
       result = cards.where((card) =>
         card.displayName.toLowerCase().contains(searchQuery.toLowerCase())
       ).toList();
+      
+      // Appliquer le tri seulement lors d'une recherche
+      result.sort((a, b) {
+        return _sortAscending 
+            ? a.displayName.compareTo(b.displayName)
+            : b.displayName.compareTo(a.displayName);
+      });
     }
-    
-    // Appliquer le tri
-    result.sort((a, b) {
-      return _sortAscending 
-          ? a.displayName.compareTo(b.displayName)
-          : b.displayName.compareTo(a.displayName);
-    });
     
     return result;
   }
