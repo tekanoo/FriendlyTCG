@@ -7,7 +7,7 @@ void main() {
       final games = AutoGameService.getAllGames();
       final gundamGame = games.firstWhere((game) => game.name == 'Gundam Cards');
       
-      expect(gundamGame.imagePath, equals('assets/logo/Gundam/gundam.webp'));
+      expect(gundamGame.imagePath, equals('assets/logo/Gundam/gundam.png'));
     });
 
     test('should return correct logo path for Pokemon', () {

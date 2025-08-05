@@ -148,17 +148,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Image.asset(
-                            'assets/images/google_logo.png',
-                            height: 24,
-                            width: 24,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(
-                                Icons.login,
-                                size: 24,
-                                color: Colors.blue,
-                              );
-                            },
+                          const Icon(
+                            Icons.login,
+                            size: 24,
+                            color: Colors.blue,
                           ),
                           const SizedBox(width: 12),
                           const Text(
