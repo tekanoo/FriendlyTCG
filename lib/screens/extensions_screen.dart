@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/game_service.dart';
+import '../services/auto_game_service.dart';
 import '../models/extension_model.dart';
 import 'extension_gallery_screen.dart';
 
-class ExtensionsScreen extends StatelessWidget {
+class ExtensionsScreen extends StatefulWidget {
   final String? gameId;
   final String? gameTitle;
 
@@ -14,6 +15,26 @@ class ExtensionsScreen extends StatelessWidget {
   });
 
   @override
+  State<ExtensionsScreen> createState() => _ExtensionsScreenState();
+}
+
+class _ExtensionsScreenState extends State<ExtensionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Vérifier automatiquement les nouvelles extensions Gundam au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForNewExtensions();
+    });
+  }
+
+  Future<void> _checkForNewExtensions() async {
+    if (widget.gameId?.contains('gundam') == true || widget.gameId == null) {
+      await AutoGameService.autoDisplayFirstImageForNewExtensions();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final gameService = GameService();
     
@@ -22,9 +43,9 @@ class ExtensionsScreen extends StatelessWidget {
     List<ExtensionModel> extensions;
     String title;
     
-    if (gameId != null) {
-      extensions = gameService.getExtensionsForGame(gameId!);
-      title = gameTitle ?? 'Extensions';
+    if (widget.gameId != null) {
+      extensions = gameService.getExtensionsForGame(widget.gameId!);
+      title = widget.gameTitle ?? 'Extensions';
     } else {
       // Logique par défaut - Gundam
       extensions = gameService.getExtensionsForGame('gundam_card_game');
@@ -41,11 +62,29 @@ class ExtensionsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Extensions disponibles',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Extensions disponibles',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                // Bouton de debug pour les extensions Gundam
+                if (widget.gameId?.contains('gundam') == true || widget.gameId == null)
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      AutoGameService.debugGundamExtensions();
+                    },
+                    icon: const Icon(Icons.bug_report, size: 16),
+                    label: const Text('Debug Extensions'),
+                    style: ElevatedButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             Center(

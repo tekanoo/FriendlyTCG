@@ -252,11 +252,13 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
 
   @override
   Widget build(BuildContext context) {
-    // Pour les cartes Pokémon, utiliser la quantité totale (normal + reverse)
-    final int quantity = _isPokemonCard(widget.card.name) 
-        ? _collectionService.getTotalCardQuantity(widget.card.name)
-        : _collectionService.getCardQuantity(widget.card.name);
-    final bool isOwned = quantity > 0;
+    return StreamBuilder<int>(
+      stream: _isPokemonCard(widget.card.name) 
+          ? _collectionService.getTotalCardQuantityStream(widget.card.name)
+          : _collectionService.getCardQuantityStream(widget.card.name),
+      builder: (context, snapshot) {
+        final int quantity = snapshot.data ?? 0;
+        final bool isOwned = quantity > 0;
 
     return Card(
       elevation: 2,
@@ -460,6 +462,8 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }

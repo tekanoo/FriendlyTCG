@@ -238,12 +238,11 @@ class _CardTileState extends State<_CardTile> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
-      stream: _collectionService.getCardQuantityStream(widget.card.name),
+      stream: _isPokemonCard(widget.card.name) 
+          ? _collectionService.getTotalCardQuantityStream(widget.card.name)
+          : _collectionService.getCardQuantityStream(widget.card.name),
       builder: (context, snapshot) {
-        // Pour les cartes Pokémon, obtenir la quantité totale (normal + reverse)
-        final int quantity = _isPokemonCard(widget.card.name) 
-            ? _collectionService.getTotalCardQuantity(widget.card.name)
-            : snapshot.data ?? 0;
+        final int quantity = snapshot.data ?? 0;
 
         return Card(
           elevation: 2, // Ombre plus marquÃ©e

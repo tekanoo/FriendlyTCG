@@ -223,6 +223,16 @@ class CollectionService {
   Future<void> addCardWithVariant(String cardName, String variant) async {
     final cardKey = variant == 'normal' ? cardName : '${cardName}_$variant';
     await addCard(cardKey);
+    
+    // Notifier les changements pour la carte de base aussi (pour les interfaces qui écoutent le total)
+    if (_isPokemonCard(cardName)) {
+      _notifyCardChanged(cardName);
+      if (variant == 'normal') {
+        _notifyCardChanged('${cardName}_reverse');
+      } else {
+        _notifyCardChanged(cardName);
+      }
+    }
   }
 
   // Obtenir toutes les variantes d'une carte
@@ -265,6 +275,22 @@ class CollectionService {
     await _saveCollection();
   }
 
+  // Retirer une carte avec variante (pour Pokémon)
+  Future<void> removeCardWithVariant(String cardName, String variant) async {
+    final cardKey = variant == 'normal' ? cardName : '${cardName}_$variant';
+    await removeCard(cardKey);
+    
+    // Notifier les changements pour la carte de base aussi (pour les interfaces qui écoutent le total)
+    if (_isPokemonCard(cardName)) {
+      _notifyCardChanged(cardName);
+      if (variant == 'normal') {
+        _notifyCardChanged('${cardName}_reverse');
+      } else {
+        _notifyCardChanged(cardName);
+      }
+    }
+  }
+
   // Définir la quantité d'une carte
   Future<void> setCardQuantity(String cardName, int quantity) async {
     _collection.setCardQuantity(cardName, quantity);
@@ -303,6 +329,39 @@ class CollectionService {
       controller.onCancel = () {
         subscription.cancel();
       };
+    });
+  }
+
+  // Stream pour la quantité totale d'une carte (incluant les variantes Pokemon)
+  Stream<int> getTotalCardQuantityStream(String cardName) {
+    return Stream.multi((controller) {
+      // Émettre la valeur actuelle immédiatement
+      controller.add(getTotalCardQuantity(cardName));
+      
+      // Pour les cartes Pokemon, écouter les changements sur les deux variantes
+      if (_isPokemonCard(cardName)) {
+        final subscription1 = cardUpdateStream
+            .where((updatedCardName) => updatedCardName == cardName)
+            .listen((_) => controller.add(getTotalCardQuantity(cardName)));
+            
+        final subscription2 = cardUpdateStream
+            .where((updatedCardName) => updatedCardName == '${cardName}_reverse')
+            .listen((_) => controller.add(getTotalCardQuantity(cardName)));
+        
+        controller.onCancel = () {
+          subscription1.cancel();
+          subscription2.cancel();
+        };
+      } else {
+        // Pour les autres cartes, même comportement que getCardQuantityStream
+        final subscription = cardUpdateStream
+            .where((updatedCardName) => updatedCardName == cardName)
+            .listen((_) => controller.add(getTotalCardQuantity(cardName)));
+        
+        controller.onCancel = () {
+          subscription.cancel();
+        };
+      }
     });
   }
 

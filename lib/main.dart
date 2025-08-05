@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'widgets/auth_wrapper.dart';
 import 'screens/user_profile_screen.dart';
 import 'services/analytics_service.dart';
+import 'services/auto_game_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,11 @@ void main() async {
     // Initialiser Firebase Analytics
     final analyticsService = AnalyticsService();
     await analyticsService.initialize();
+    
+    // Debug des extensions (seulement en développement)
+    if (kDebugMode) {
+      AutoGameService.debugExtensions();
+    }
     
     runApp(const MyApp());
   } catch (e) {
