@@ -4,6 +4,7 @@ import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
 import '../widgets/adaptive_card_grid.dart';
+import '../widgets/pokemon_card_add_dialog.dart';
 
 class CollectionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -244,6 +245,11 @@ class _CollectionCardTile extends StatefulWidget {
 class _CollectionCardTileState extends State<_CollectionCardTile> {
   final CollectionService _collectionService = CollectionService();
 
+  // Vérifier si c'est une carte Pokémon
+  bool _isPokemonCard(String cardName) {
+    return cardName.startsWith('SV') || cardName.contains('_FR_');
+  }
+
   @override
   Widget build(BuildContext context) {
     final int quantity = _collectionService.getCardQuantity(widget.card.name);
@@ -394,7 +400,18 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
                   )
                 : GestureDetector(
                     onTap: () async {
-                      await _collectionService.addCard(widget.card.name);
+                      // Détecter si c'est une carte Pokémon pour afficher le dialogue des variantes
+                      if (_isPokemonCard(widget.card.name)) {
+                        await showDialog(
+                          context: context,
+                          builder: (context) => PokemonCardAddDialog(
+                            cardName: widget.card.name,
+                            displayName: widget.card.displayName,
+                          ),
+                        );
+                      } else {
+                        await _collectionService.addCard(widget.card.name);
+                      }
                       setState(() {});
                     },
                     child: Container(

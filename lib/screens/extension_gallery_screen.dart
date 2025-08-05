@@ -4,6 +4,7 @@ import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
 import '../widgets/adaptive_card_grid.dart';
+import '../widgets/pokemon_card_add_dialog.dart';
 
 class ExtensionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -229,6 +230,11 @@ class _CardTile extends StatefulWidget {
 class _CardTileState extends State<_CardTile> {
   final CollectionService _collectionService = CollectionService();
 
+  // Vérifier si c'est une carte Pokémon
+  bool _isPokemonCard(String cardName) {
+    return cardName.startsWith('SV') || cardName.contains('_FR_');
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
@@ -343,8 +349,20 @@ class _CardTileState extends State<_CardTile> {
                       width: 28,
                       height: 28,
                       child: ElevatedButton(
-                        onPressed: () {
-                          _collectionService.addCard(widget.card.name);
+                        onPressed: () async {
+                          // Détecter si c'est une carte Pokémon
+                          if (_isPokemonCard(widget.card.name)) {
+                            await showDialog(
+                              context: context,
+                              builder: (context) => PokemonCardAddDialog(
+                                cardName: widget.card.name,
+                                displayName: widget.card.displayName,
+                              ),
+                            );
+                          } else {
+                            await _collectionService.addCard(widget.card.name);
+                          }
+                          setState(() {});
                         },
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -386,6 +404,11 @@ class _CardModalState extends State<_CardModal> {
   late PageController _pageController;
   late int currentIndex;
   final CollectionService _collectionService = CollectionService();
+
+  // Vérifier si c'est une carte Pokémon
+  bool _isPokemonCardInModal(String cardName) {
+    return cardName.startsWith('SV') || cardName.contains('_FR_');
+  }
 
   @override
   void initState() {
@@ -544,7 +567,20 @@ class _CardModalState extends State<_CardModal> {
               ),
               IconButton(
                 icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () => _collectionService.addCard(card.name),
+                onPressed: () async {
+                  // Détecter si c'est une carte Pokémon
+                  if (_isPokemonCardInModal(card.name)) {
+                    await showDialog(
+                      context: context,
+                      builder: (context) => PokemonCardAddDialog(
+                        cardName: card.name,
+                        displayName: card.displayName,
+                      ),
+                    );
+                  } else {
+                    await _collectionService.addCard(card.name);
+                  }
+                },
               ),
             ],
           ),

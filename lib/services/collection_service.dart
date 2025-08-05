@@ -219,6 +219,32 @@ class CollectionService {
     await _saveCollection();
   }
 
+  // Ajouter une carte avec variante (pour Pokémon)
+  Future<void> addCardWithVariant(String cardName, String variant) async {
+    final cardKey = variant == 'normal' ? cardName : '${cardName}_$variant';
+    await addCard(cardKey);
+  }
+
+  // Obtenir toutes les variantes d'une carte
+  Map<String, int> getCardVariants(String baseName) {
+    final variants = <String, int>{};
+    
+    // Variante normale
+    variants['normal'] = getCardQuantity(baseName);
+    
+    // Variante reverse pour Pokémon
+    if (_isPokemonCard(baseName)) {
+      variants['reverse'] = getCardQuantity('${baseName}_reverse');
+    }
+    
+    return variants;
+  }
+
+  // Vérifier si c'est une carte Pokémon
+  bool _isPokemonCard(String cardName) {
+    return cardName.startsWith('SV') || cardName.contains('_FR_');
+  }
+
   // Retirer une carte
   Future<void> removeCard(String cardName) async {
     _collection.removeCard(cardName);

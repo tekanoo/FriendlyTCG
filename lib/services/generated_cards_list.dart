@@ -189,6 +189,94 @@ class GeneratedCardsList {
     ];
   }
 
+  static List<String> getEditionBetaCards() {
+    return [
+      'EXB-001_p5.png',
+      'EXR-001_p5.png',
+      'GD01-004_p1.png',
+      'GD01-004_p2.png',
+      'GD01-005_p2.png',
+      'GD01-008_p1.png',
+      'GD01-009_p1.png',
+      'GD01-011_p1.png',
+      'GD01-013_p1.png',
+      'GD01-015_p1.png',
+      'GD01-016_p1.png',
+      'GD01-018_p1.png',
+      'GD01-026_p1.png',
+      'GD01-026_p2.png',
+      'GD01-028_p1.png',
+      'GD01-030_p1.png',
+      'GD01-031_p1.png',
+      'GD01-034_p1.png',
+      'GD01-040_p1.png',
+      'GD01-041_p1.png',
+      'GD01-068_p1.png',
+      'GD01-070_p1.png',
+      'GD01-070_p2.png',
+      'GD01-072_p1.png',
+      'GD01-075_p1.png',
+      'GD01-076_p1.png',
+      'GD01-077_p1.png',
+      'GD01-081_p1.png',
+      'GD01-088_p1.png',
+      'GD01-088_p2.png',
+      'GD01-089_p1.png',
+      'GD01-091_p1.png',
+      'GD01-097_p1.png',
+      'GD01-099_p1.png',
+      'GD01-100_p2.png',
+      'GD01-100_p3.png',
+      'GD01-105_p2.png',
+      'GD01-107_p1.png',
+      'GD01-107_p2.png',
+      'GD01-117_p2.png',
+      'GD01-118_p2.png',
+      'GD01-118_p3.png',
+      'GD01-120_p1.png',
+      'GD01-124_p1.png',
+      'R-001_p4.png',
+      'R-001_p5.png',
+      'ST01-001_p2.png',
+      'ST01-001_p3.png',
+      'ST01-002_p2.png',
+      'ST01-005_p2.png',
+      'ST01-007_p2.png',
+      'ST01-008_p2.png',
+      'ST01-010_p2.png',
+      'ST01-011_p2.png',
+      'ST01-011_p3.png',
+      'ST01-012_p2.png',
+      'ST01-013_p2.png',
+      'ST01-015_p2.png',
+      'ST01-016_p2.png',
+      'ST02-001_p2.png',
+      'ST02-001_p3.png',
+      'ST02-002_p2.png',
+      'ST02-005_p2.png',
+      'ST02-010_p2.png',
+      'ST02-012_p2.png',
+      'ST02-013_p2.png',
+      'ST02-015_p2.png',
+      'ST03-007_p2.png',
+      'ST03-008_p2.png',
+      'ST03-011_p2.png',
+      'ST03-011_p3.png',
+      'ST03-016_p2.png',
+      'ST04-001_p2.png',
+      'ST04-001_p3.png',
+      'ST04-002_p2.png',
+      'ST04-005_p2.png',
+      'ST04-010_p2.png',
+      'ST04-013_p2.png',
+      'ST04-015_p2.png',
+      'T-001_p1.png',
+      'T-002_p1.png',
+      'T-003_p1.png',
+      'T-006_p1.png',
+    ];
+  }
+
   static List<String> getPrismaticEvolutionsCards() {
     return [
       'SV8pt5_FR_1.png',
@@ -379,6 +467,7 @@ class GeneratedCardsList {
     return {
       'Gundam Cards': [
         'newtype_risings',
+        'edition_beta',
       ],
       'Pokemon': [
         'prismatic-evolutions',
@@ -389,6 +478,7 @@ class GeneratedCardsList {
   static List<String> getAllExtensionIds() {
     return [
       'newtype_risings',
+      'edition_beta',
       'prismatic-evolutions',
     ];
   }
@@ -396,6 +486,7 @@ class GeneratedCardsList {
   static String? getGameForExtension(String extensionId) {
     final gameMap = {
       'newtype_risings': 'Gundam Cards',
+      'edition_beta': 'Gundam Cards',
       'prismatic-evolutions': 'Pokemon',
     };
     return gameMap[extensionId];
@@ -405,6 +496,8 @@ class GeneratedCardsList {
     switch (extensionId) {
       case 'newtype_risings':
         return getNewtypeRisingsCards();
+      case 'edition_beta':
+        return getEditionBetaCards();
       case 'prismatic-evolutions':
         return getPrismaticEvolutionsCards();
       default:
