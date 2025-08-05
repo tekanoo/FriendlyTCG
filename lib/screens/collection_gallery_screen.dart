@@ -4,7 +4,7 @@ import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
 import '../widgets/adaptive_card_grid.dart';
-import '../widgets/pokemon_card_add_dialog.dart';
+import '../widgets/pokemon_card_manage_dialog.dart';
 
 class CollectionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -252,7 +252,10 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
 
   @override
   Widget build(BuildContext context) {
-    final int quantity = _collectionService.getCardQuantity(widget.card.name);
+    // Pour les cartes Pokémon, utiliser la quantité totale (normal + reverse)
+    final int quantity = _isPokemonCard(widget.card.name) 
+        ? _collectionService.getTotalCardQuantity(widget.card.name)
+        : _collectionService.getCardQuantity(widget.card.name);
     final bool isOwned = quantity > 0;
 
     return Card(
@@ -335,7 +338,19 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
                         height: 28,
                         child: ElevatedButton(
                           onPressed: quantity > 0 ? () async {
-                            await _collectionService.removeCard(widget.card.name);
+                            // Détecter si c'est une carte Pokémon pour gérer les variantes
+                            if (_isPokemonCard(widget.card.name)) {
+                              await showDialog(
+                                context: context,
+                                builder: (context) => PokemonCardManageDialog(
+                                  cardName: widget.card.name,
+                                  displayName: widget.card.displayName,
+                                  isAdd: false,
+                                ),
+                              );
+                            } else {
+                              await _collectionService.removeCard(widget.card.name);
+                            }
                             setState(() {});
                           } : null,
                           style: ElevatedButton.styleFrom(
@@ -404,9 +419,10 @@ class _CollectionCardTileState extends State<_CollectionCardTile> {
                       if (_isPokemonCard(widget.card.name)) {
                         await showDialog(
                           context: context,
-                          builder: (context) => PokemonCardAddDialog(
+                          builder: (context) => PokemonCardManageDialog(
                             cardName: widget.card.name,
                             displayName: widget.card.displayName,
+                            isAdd: true,
                           ),
                         );
                       } else {

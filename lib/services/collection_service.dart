@@ -279,6 +279,14 @@ class CollectionService {
     return _collection.getCardQuantity(cardName);
   }
 
+  // Obtenir la quantité totale d'une carte (normal + reverse pour Pokemon)
+  int getTotalCardQuantity(String baseName) {
+    if (_isPokemonCard(baseName)) {
+      return getCardQuantity(baseName) + getCardQuantity('${baseName}_reverse');
+    }
+    return getCardQuantity(baseName);
+  }
+
   // Stream pour une carte spÃ©cifique
   Stream<int> getCardQuantityStream(String cardName) {
     return Stream.multi((controller) {

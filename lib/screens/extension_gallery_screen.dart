@@ -4,7 +4,7 @@ import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/pagination_controls.dart';
 import '../widgets/adaptive_card_grid.dart';
-import '../widgets/pokemon_card_add_dialog.dart';
+import '../widgets/pokemon_card_manage_dialog.dart';
 
 class ExtensionGalleryScreen extends StatefulWidget {
   final ExtensionModel extension;
@@ -240,7 +240,10 @@ class _CardTileState extends State<_CardTile> {
     return StreamBuilder<int>(
       stream: _collectionService.getCardQuantityStream(widget.card.name),
       builder: (context, snapshot) {
-        final int quantity = snapshot.data ?? 0;
+        // Pour les cartes Pokémon, obtenir la quantité totale (normal + reverse)
+        final int quantity = _isPokemonCard(widget.card.name) 
+            ? _collectionService.getTotalCardQuantity(widget.card.name)
+            : snapshot.data ?? 0;
 
         return Card(
           elevation: 2, // Ombre plus marquÃ©e
@@ -304,8 +307,21 @@ class _CardTileState extends State<_CardTile> {
                       width: 28,
                       height: 28,
                       child: ElevatedButton(
-                        onPressed: quantity > 0 ? () {
-                          _collectionService.removeCard(widget.card.name);
+                        onPressed: quantity > 0 ? () async {
+                          // Détecter si c'est une carte Pokémon pour gérer les variantes
+                          if (_isPokemonCard(widget.card.name)) {
+                            await showDialog(
+                              context: context,
+                              builder: (context) => PokemonCardManageDialog(
+                                cardName: widget.card.name,
+                                displayName: widget.card.displayName,
+                                isAdd: false,
+                              ),
+                            );
+                          } else {
+                            await _collectionService.removeCard(widget.card.name);
+                          }
+                          setState(() {});
                         } : null,
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -354,9 +370,10 @@ class _CardTileState extends State<_CardTile> {
                           if (_isPokemonCard(widget.card.name)) {
                             await showDialog(
                               context: context,
-                              builder: (context) => PokemonCardAddDialog(
+                              builder: (context) => PokemonCardManageDialog(
                                 cardName: widget.card.name,
                                 displayName: widget.card.displayName,
+                                isAdd: true,
                               ),
                             );
                           } else {
@@ -537,7 +554,10 @@ class _CardModalState extends State<_CardModal> {
     return StreamBuilder<int>(
       stream: _collectionService.getCardQuantityStream(card.name),
       builder: (context, snapshot) {
-        final quantity = snapshot.data ?? 0;
+        // Pour les cartes Pokémon, obtenir la quantité totale (normal + reverse)
+        final quantity = _isPokemonCardInModal(card.name) 
+            ? _collectionService.getTotalCardQuantity(card.name)
+            : snapshot.data ?? 0;
         
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -551,7 +571,21 @@ class _CardModalState extends State<_CardModal> {
               IconButton(
                 icon: const Icon(Icons.remove, color: Colors.white),
                 onPressed: quantity > 0 
-                  ? () => _collectionService.removeCard(card.name)
+                  ? () async {
+                      // Détecter si c'est une carte Pokémon pour gérer les variantes
+                      if (_isPokemonCardInModal(card.name)) {
+                        await showDialog(
+                          context: context,
+                          builder: (context) => PokemonCardManageDialog(
+                            cardName: card.name,
+                            displayName: card.displayName,
+                            isAdd: false,
+                          ),
+                        );
+                      } else {
+                        await _collectionService.removeCard(card.name);
+                      }
+                    }
                   : null,
               ),
               Container(
@@ -572,9 +606,10 @@ class _CardModalState extends State<_CardModal> {
                   if (_isPokemonCardInModal(card.name)) {
                     await showDialog(
                       context: context,
-                      builder: (context) => PokemonCardAddDialog(
+                      builder: (context) => PokemonCardManageDialog(
                         cardName: card.name,
                         displayName: card.displayName,
+                        isAdd: true,
                       ),
                     );
                   } else {
