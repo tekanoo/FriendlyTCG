@@ -49,17 +49,35 @@ class CollectionStatsService {
   ExtensionStats _calculateExtensionStats(ExtensionModel extension, Map<String, int> userCollection) {
     final List<String> ownedCardNames = [];
     int ownedCardsCount = 0;
+    int totalCardsCount = extension.cardImages.length;
 
     // Parcourir toutes les cartes de l'extension
     for (final cardImagePath in extension.cardImages) {
       // Extraire le nom de la carte du chemin d'image
       final cardName = _extractCardNameFromPath(cardImagePath);
       
-      // Vérifier si l'utilisateur possède cette carte
-      final quantity = userCollection[cardName] ?? 0;
-      if (quantity > 0) {
-        ownedCardNames.add(cardName);
-        ownedCardsCount += quantity;
+      // Vérifier si c'est une carte Pokémon (qui a des variantes)
+      if (_isPokemonCard(cardName)) {
+        // Pour les cartes Pokémon, calculer le total des 2 variantes
+        final normalQuantity = userCollection[cardName] ?? 0;
+        final reverseQuantity = userCollection['${cardName}_reverse'] ?? 0;
+        final totalQuantity = normalQuantity + reverseQuantity;
+        
+        if (totalQuantity > 0) {
+          ownedCardNames.add(cardName);
+          ownedCardsCount += totalQuantity;
+        }
+        
+        // Pour les Pokémon, multiplier par 2 le nombre total de cartes disponibles
+        // (chaque carte existe en version normale ET reverse)
+        totalCardsCount += 1; // +1 pour la version reverse de cette carte
+      } else {
+        // Pour les autres cartes (non-Pokémon), comportement normal
+        final quantity = userCollection[cardName] ?? 0;
+        if (quantity > 0) {
+          ownedCardNames.add(cardName);
+          ownedCardsCount += quantity;
+        }
       }
     }
 
@@ -67,9 +85,14 @@ class CollectionStatsService {
       extensionId: extension.id,
       extensionName: extension.name,
       ownedCards: ownedCardsCount,
-      totalCards: extension.cardImages.length,
+      totalCards: totalCardsCount,
       ownedCardNames: ownedCardNames,
     );
+  }
+
+  /// Vérifier si c'est une carte Pokémon (qui a des variantes normal/reverse)
+  bool _isPokemonCard(String cardName) {
+    return cardName.startsWith('SV') || cardName.contains('_FR_');
   }
 
   /// Extrait le nom de la carte du chemin d'image

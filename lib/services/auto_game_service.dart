@@ -224,6 +224,50 @@ class AutoGameService {
     }
   }
 
+  /// Méthode pour débugger spécifiquement l'extension edition_beta
+  static void debugEditionBetaExtension() {
+    print('🔍 DEBUG spécifique pour edition_beta...');
+    
+    // Vérifier si l'extension existe dans la structure
+    final gameStructure = GeneratedCardsList.getGameStructure();
+    print('📋 Structure des jeux: $gameStructure');
+    
+    // Chercher edition_beta dans toutes les extensions
+    bool found = false;
+    for (final entry in gameStructure.entries) {
+      if (entry.value.contains('edition_beta')) {
+        found = true;
+        print('✅ Extension edition_beta trouvée dans ${entry.key}');
+        break;
+      }
+    }
+    
+    if (found) {
+      // Obtenir les cartes
+      final cards = GeneratedCardsList.getCardsByExtensionId('edition_beta');
+      print('🃏 Cartes trouvées pour edition_beta: ${cards.length}');
+      if (cards.isNotEmpty) {
+        print('🔸 Première carte: ${cards.first}');
+        
+        // Tester le chemin de la première carte
+        final cardPath = GeneratedCardsList.getCardPath('edition_beta', cards.first);
+        print('🖼️  Chemin de la première carte: $cardPath');
+        
+        // Tester la méthode _getExtensionImagePath
+        final imagePath = _getExtensionImagePath('Gundam Cards', 'edition_beta');
+        print('🎯 Image path générée: $imagePath');
+      } else {
+        print('❌ Aucune carte trouvée pour edition_beta');
+      }
+      
+      // Vérifier le jeu associé
+      final gameName = GeneratedCardsList.getGameForExtension('edition_beta');
+      print('🎮 Jeu associé: $gameName');
+    } else {
+      print('❌ Extension edition_beta NON trouvée dans la structure');
+    }
+  }
+
   /// Convertir un ID de jeu vers le nom du dossier
   static String _gameIdToName(String gameId) {
     // Convertir l'ID en nom de dossier (inverse de _gameNameToId)

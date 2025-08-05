@@ -22,9 +22,12 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
     super.initState();
     _loadStats();
     
-    // Écouter les changements de collection
+    // Écouter les changements de collection pour mettre à jour le dashboard
     _collectionService.collectionStream.listen((_) {
-      _loadStats();
+      if (mounted) {
+        print('🔄 Collection modifiée - Rechargement des statistiques du dashboard');
+        _loadStats();
+      }
     });
   }
 
@@ -68,11 +71,24 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
         padding: const EdgeInsets.all(16),
         children: [
           // Titre
-          Text(
-            'Ma Collection',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ma Collection',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  print('🔄 Rechargement manuel des statistiques');
+                  _loadStats();
+                },
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Actualiser les statistiques',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(

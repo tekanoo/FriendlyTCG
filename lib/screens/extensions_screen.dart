@@ -73,16 +73,33 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
                 ),
                 // Bouton de debug pour les extensions Gundam
                 if (widget.gameId?.contains('gundam') == true || widget.gameId == null)
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      AutoGameService.debugGundamExtensions();
-                    },
-                    icon: const Icon(Icons.bug_report, size: 16),
-                    label: const Text('Debug Extensions'),
-                    style: ElevatedButton.styleFrom(
-                      textStyle: const TextStyle(fontSize: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          AutoGameService.debugGundamExtensions();
+                        },
+                        icon: const Icon(Icons.bug_report, size: 16),
+                        label: const Text('Debug Gundam'),
+                        style: ElevatedButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          AutoGameService.debugEditionBetaExtension();
+                        },
+                        icon: const Icon(Icons.image, size: 16),
+                        label: const Text('Debug Edition Beta'),
+                        style: ElevatedButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          backgroundColor: Colors.orange,
+                        ),
+                      ),
+                    ],
                   ),
               ],
             ),
