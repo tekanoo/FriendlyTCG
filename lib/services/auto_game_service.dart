@@ -119,10 +119,10 @@ class AutoGameService {
   
   static String _getGameImagePath(String gameName) {
     // Retourner le chemin de l'image du jeu depuis les logos
-    if (gameName.toLowerCase() == 'gundam cards') {
+    if (gameName == 'Gundam Cards') {
       return 'assets/logo/Gundam/gundam.webp';
     }
-    if (gameName.toLowerCase() == 'pokemon') {
+    if (gameName == 'Pokemon' || gameName == 'Pokémon') {
       return 'assets/logo/Pokémon/Pokemon-Logo.png';
     }
     return 'assets/images/default_game.png';
