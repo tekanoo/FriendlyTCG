@@ -1,25 +1,27 @@
 // Script de vérification des images d'extension
 
-import '../lib/services/auto_game_service.dart';
-import '../lib/services/generated_cards_list.dart';
+import 'package:flutter/foundation.dart';
+import 'package:friendly_tcg_app/services/auto_game_service.dart';
+import 'package:friendly_tcg_app/services/generated_cards_list.dart';
 
 void main() {
-  print('=== Vérification des images d\'extension ===');
+  debugPrint('=== Vérification des images d\'extension ===');
   
   final extensions = AutoGameService.getAllExtensions();
   
   for (final extension in extensions) {
-    print('\nExtension: ${extension.name} (${extension.id})');
-    print('Chemin image: ${extension.imagePath}');
+    debugPrint('\nExtension: ${extension.name} (${extension.id})');
+    debugPrint('Chemin image: ${extension.imagePath}');
     
     final cards = GeneratedCardsList.getCardsByExtensionId(extension.id);
     if (cards.isNotEmpty) {
-      print('Première carte: ${cards.first}');
-      print('Chemin première carte: ${GeneratedCardsList.getCardPath(extension.id, cards.first)}');
+      debugPrint('Première carte: ${cards.first}');
+      debugPrint('Chemin première carte: ${GeneratedCardsList.getCardPath(extension.id, cards.first)}');
     } else {
-      print('ERREUR: Aucune carte trouvée pour cette extension');
+      debugPrint('ERREUR: Aucune carte trouvée pour cette extension');
     }
   }
   
-  print('\n=== Fin de vérification ===');
+  debugPrint('\n=== Fin de vérification ===');
 }
+

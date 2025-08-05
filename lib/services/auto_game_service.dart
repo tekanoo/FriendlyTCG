@@ -22,7 +22,7 @@ class AutoGameService {
         name: _formatGameName(gameName),
         description: 'Jeu de cartes avec $extensionCount extension${extensionCount > 1 ? 's' : ''}',
         imagePath: _getGameImagePath(gameName),
-        folderPath: 'assets/images/$gameName', // Chemin requis
+        folderPath: 'assets/images/$gameName',
       ));
     }
     
@@ -48,9 +48,9 @@ class AutoGameService {
           id: extensionName,
           name: _formatExtensionName(extensionName),
           description: 'Extension avec $cardCount cartes',
-          imagePath: _getExtensionImagePath(gameName, extensionName),
           gameId: gameId,
-          cardImages: GeneratedCardsList.getCardsByExtensionId(extensionName), // Liste des cartes requise
+          imagePath: _getExtensionImagePath(gameName, extensionName),
+          cardImages: GeneratedCardsList.getCardsByExtensionId(extensionName),
         ));
       }
     }
@@ -61,50 +61,41 @@ class AutoGameService {
   
   /// Obtient les extensions pour un jeu spécifique
   static List<ExtensionModel> getExtensionsForGame(String gameId) {
-    return getAllExtensions().where((ext) => ext.gameId == gameId).toList();
+    final allExtensions = getAllExtensions();
+    return allExtensions.where((ext) => ext.gameId == gameId).toList();
   }
   
-  /// Obtient les cartes pour une extension
+  /// Obtient les cartes pour une extension spécifique
   static List<String> getCardsForExtension(String extensionId) {
-    // Les cartes sont déjà triées dans le fichier généré
     return GeneratedCardsList.getCardsByExtensionId(extensionId);
   }
   
-  /// Obtient le chemin complet d'une carte
+  /// Invalide le cache (utile après ajout/suppression d'éléments)
+  static void invalidateCache() {
+    _cachedGames = null;
+    _cachedExtensions = null;
+  }
+  
+  /// Alias pour invalidateCache (compatibilité)
+  static void clearCache() {
+    invalidateCache();
+  }
+  
+  /// Obtenir le chemin d'une carte spécifique
   static String getCardImagePath(String extensionId, String cardName) {
     return GeneratedCardsList.getCardPath(extensionId, cardName);
   }
   
-  /// Vide le cache pour recharger les données
-  static void clearCache() {
-    _cachedGames = null;
-    _cachedExtensions = null;
-    print('🔄 Cache des jeux et extensions vidé');
-  }
-  
-  /// Méthode de debug pour vérifier les extensions
+  /// Méthode de debug (vide pour compatibilité)
   static void debugExtensions() {
-    print('=== DEBUG: Extensions détectées ===');
-    final extensions = getAllExtensions();
-    
-    for (final extension in extensions) {
-      print('📦 ${extension.name} (${extension.id})');
-      print('   📁 Game: ${extension.gameId}');
-      print('   🖼️ Image: ${extension.imagePath}');
-      print('   🃏 Cartes: ${extension.cardImages.length}');
-      
-      if (extension.cardImages.isNotEmpty) {
-        print('   🥇 Première carte: ${extension.cardImages.first}');
-      }
-      print('');
-    }
-    print('=== Fin DEBUG ===');
+    // Méthode vide pour compatibilité
   }
   
-  // Méthodes utilitaires privées
+  // === Méthodes privées ===
   
   static String _gameNameToId(String gameName) {
-    return gameName.toLowerCase().replaceAll(' ', '_');
+    // Convertir le nom en ID (lowercase avec tirets)
+    return gameName.toLowerCase().replaceAll(' ', '-');
   }
   
   static String _formatGameName(String gameName) {
@@ -143,136 +134,10 @@ class AutoGameService {
     if (cards.isNotEmpty) {
       // Utiliser la première carte comme image d'extension
       final firstCardPath = GeneratedCardsList.getCardPath(extensionName, cards.first);
-      print('🖼️ Extension $extensionName: utilise $firstCardPath comme image');
       return firstCardPath;
     }
     
     // Fallback vers une image de couverture générique
-    final fallbackPath = 'assets/images/$gameName/$extensionName/cover.png';
-    print('⚠️ Extension $extensionName: aucune carte trouvée, utilise $fallbackPath');
-    return fallbackPath;
-  }
-
-  /// Vérifier et afficher automatiquement la première image des nouvelles extensions
-  static Future<void> autoDisplayFirstImageForNewExtensions() async {
-    print('🔍 Vérification des nouvelles extensions Gundam...');
-    
-    final games = getAllGames();
-    for (final game in games) {
-      if (game.name.toLowerCase().contains('gundam')) {
-        final extensions = getExtensionsForGame(game.id);
-        print('📋 Traitement de ${extensions.length} extensions pour ${game.name}');
-        
-        for (final extension in extensions) {
-          final gameName = _gameIdToName(game.id);
-          final imagePath = _getExtensionImagePath(gameName, extension.id);
-          print('✅ Extension ${extension.name}: première image trouvée - $imagePath');
-          
-          // Optionnel: vous pourriez ici déclencher une notification ou une action
-          // pour informer l'utilisateur qu'une nouvelle extension a été détectée
-        }
-      }
-    }
-  }
-
-  /// Obtenir la liste des extensions qui n'ont pas encore d'image assignée
-  static List<ExtensionModel> getExtensionsWithoutImages() {
-    final extensionsWithoutImages = <ExtensionModel>[];
-    
-    final games = getAllGames();
-    for (final game in games) {
-      if (game.name.toLowerCase().contains('gundam')) {
-        final extensions = getExtensionsForGame(game.id);
-        
-        for (final extension in extensions) {
-          final cards = getCardsForExtension(extension.id);
-          if (cards.isEmpty) {
-            extensionsWithoutImages.add(extension);
-          }
-        }
-      }
-    }
-    
-    return extensionsWithoutImages;
-  }
-
-  /// Méthode pour débugger spécifiquement les extensions Gundam
-  static void debugGundamExtensions() {
-    print('🔍 Analyse des extensions Gundam et de leurs images...');
-    
-    final games = getAllGames();
-    for (final game in games) {
-      if (game.name.toLowerCase().contains('gundam')) {
-        print('\n🎮 Jeu: ${game.name} (${game.id})');
-        final extensions = getExtensionsForGame(game.id);
-        print('📋 Extensions: ${extensions.length}');
-        
-        for (final extension in extensions) {
-          final gameName = _gameIdToName(game.id);
-          final imagePath = _getExtensionImagePath(gameName, extension.id);
-          print('  📦 ${extension.name} (${extension.id})');
-          print('    🖼️  Image: $imagePath');
-          
-          // Debug des cartes pour cette extension
-          final cards = getCardsForExtension(extension.id);
-          print('    🃏 Cartes: ${cards.length}');
-          if (cards.isNotEmpty) {
-            print('    🔸 Première carte: ${cards.first}');
-          }
-        }
-      }
-    }
-  }
-
-  /// Méthode pour débugger spécifiquement l'extension edition_beta
-  static void debugEditionBetaExtension() {
-    print('🔍 DEBUG spécifique pour edition_beta...');
-    
-    // Vérifier si l'extension existe dans la structure
-    final gameStructure = GeneratedCardsList.getGameStructure();
-    print('📋 Structure des jeux: $gameStructure');
-    
-    // Chercher edition_beta dans toutes les extensions
-    bool found = false;
-    for (final entry in gameStructure.entries) {
-      if (entry.value.contains('edition_beta')) {
-        found = true;
-        print('✅ Extension edition_beta trouvée dans ${entry.key}');
-        break;
-      }
-    }
-    
-    if (found) {
-      // Obtenir les cartes
-      final cards = GeneratedCardsList.getCardsByExtensionId('edition_beta');
-      print('🃏 Cartes trouvées pour edition_beta: ${cards.length}');
-      if (cards.isNotEmpty) {
-        print('🔸 Première carte: ${cards.first}');
-        
-        // Tester le chemin de la première carte
-        final cardPath = GeneratedCardsList.getCardPath('edition_beta', cards.first);
-        print('🖼️  Chemin de la première carte: $cardPath');
-        
-        // Tester la méthode _getExtensionImagePath
-        final imagePath = _getExtensionImagePath('Gundam Cards', 'edition_beta');
-        print('🎯 Image path générée: $imagePath');
-      } else {
-        print('❌ Aucune carte trouvée pour edition_beta');
-      }
-      
-      // Vérifier le jeu associé
-      final gameName = GeneratedCardsList.getGameForExtension('edition_beta');
-      print('🎮 Jeu associé: $gameName');
-    } else {
-      print('❌ Extension edition_beta NON trouvée dans la structure');
-    }
-  }
-
-  /// Convertir un ID de jeu vers le nom du dossier
-  static String _gameIdToName(String gameId) {
-    // Convertir l'ID en nom de dossier (inverse de _gameNameToId)
-    if (gameId == 'gundam-cards') return 'Gundam Cards';
-    if (gameId == 'pokemon') return 'Pokemon';
-    return gameId;
+    return 'assets/images/$gameName/$extensionName/cover.png';
   }
 }

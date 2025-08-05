@@ -25,7 +25,6 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
     // Écouter les changements de collection pour mettre à jour le dashboard
     _collectionService.collectionStream.listen((_) {
       if (mounted) {
-        print('🔄 Collection modifiée - Rechargement des statistiques du dashboard');
         _loadStats();
       }
     });
@@ -82,7 +81,6 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
               ),
               IconButton(
                 onPressed: () {
-                  print('🔄 Rechargement manuel des statistiques');
                   _loadStats();
                 },
                 icon: const Icon(Icons.refresh),

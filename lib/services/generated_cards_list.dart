@@ -508,6 +508,13 @@ class GeneratedCardsList {
   static String getCardPath(String extensionId, String cardName) {
     final gameName = getGameForExtension(extensionId);
     if (gameName == null) return '';
-    return 'assets/images/$gameName/$extensionId/$cardName';
+    
+    // Convertir le nom du jeu pour les chemins de fichiers
+    String gamePathName = gameName;
+    if (gameName == 'Gundam Cards') {
+      gamePathName = 'gundam_cards';
+    }
+    
+    return 'assets/images/$gamePathName/$extensionId/$cardName';
   }
 }
