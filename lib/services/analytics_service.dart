@@ -1,5 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
+import '../config/feature_flags.dart';
 
 class AnalyticsService {
   static final AnalyticsService _instance = AnalyticsService._internal();
@@ -9,6 +10,7 @@ class AnalyticsService {
   late final FirebaseAnalytics _analytics;
   late final FirebaseAnalyticsObserver _observer;
   bool _isInitialized = false;
+  final Set<String> _sentScreens = <String>{};
 
   FirebaseAnalytics get analytics => _analytics;
   FirebaseAnalyticsObserver get observer => _observer;
@@ -23,8 +25,10 @@ class AnalyticsService {
       
       debugPrint('✅ Firebase Analytics initialisé');
       
-      // Envoyer un événement de démarrage de l'app
-      await logAppStart();
+      if (!FeatureFlags.analyticsMinimal) {
+        // Envoyer un événement de démarrage uniquement hors mode minimal
+        await logAppStart();
+      }
       
     } catch (e) {
       debugPrint('❌ Erreur lors de l\'initialisation de Firebase Analytics: $e');
@@ -34,7 +38,7 @@ class AnalyticsService {
 
   /// Événement : Démarrage de l'application
   Future<void> logAppStart() async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -64,7 +68,7 @@ class AnalyticsService {
 
   /// Événement : Déconnexion utilisateur
   Future<void> logLogout() async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -82,6 +86,9 @@ class AnalyticsService {
   /// Événement : Navigation vers un écran
   Future<void> logScreenView({required String screenName, String? screenClass}) async {
     if (!_isInitialized) return;
+    if (FeatureFlags.deduplicateScreenViews && _sentScreens.contains(screenName)) {
+      return; // ignorer duplicat
+    }
     
     try {
       await _analytics.logScreenView(
@@ -89,6 +96,7 @@ class AnalyticsService {
         screenClass: screenClass ?? screenName,
       );
       debugPrint('📊 Analytics: screen_view - $screenName');
+      _sentScreens.add(screenName);
     } catch (e) {
       debugPrint('❌ Erreur Analytics screen_view: $e');
     }
@@ -96,7 +104,7 @@ class AnalyticsService {
 
   /// Événement : Ajout d'une carte à la collection
   Future<void> logAddCard({required String cardName, required String gameId, required String extensionId}) async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -116,7 +124,7 @@ class AnalyticsService {
 
   /// Événement : Suppression d'une carte de la collection
   Future<void> logRemoveCard({required String cardName, required String gameId, required String extensionId}) async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -136,7 +144,7 @@ class AnalyticsService {
 
   /// Événement : Consultation d'un jeu
   Future<void> logViewGame({required String gameId, required String gameName}) async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -155,7 +163,7 @@ class AnalyticsService {
 
   /// Événement : Consultation d'une extension
   Future<void> logViewExtension({required String extensionId, required String extensionName, required String gameId}) async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -175,7 +183,7 @@ class AnalyticsService {
 
   /// Événement : Création d'un échange
   Future<void> logCreateTrade() async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(
@@ -192,7 +200,7 @@ class AnalyticsService {
 
   /// Définir les propriétés utilisateur
   Future<void> setUserProperties({String? userId, String? email}) async {
-    if (!_isInitialized) return;
+  if (!_isInitialized) return;
     
     try {
       if (userId != null) {
@@ -224,7 +232,7 @@ class AnalyticsService {
     required int totalGames,
     required Map<String, int> cardsByGame,
   }) async {
-    if (!_isInitialized) return;
+  if (!_isInitialized || FeatureFlags.analyticsMinimal) return;
     
     try {
       await _analytics.logEvent(

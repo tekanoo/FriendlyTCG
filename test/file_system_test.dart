@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
 
 void main() {
   test('File system exploration', () {
@@ -13,22 +14,22 @@ void main() {
     
     for (final path in paths) {
       final file = File(path);
-      print('Path: $path -> exists: ${file.existsSync()}');
+      debugPrint('Path: $path -> exists: ${file.existsSync()}');
     }
     
     // Lister le répertoire courant
     final currentDir = Directory.current;
-    print('Current directory: ${currentDir.path}');
+  debugPrint('Current directory: ${currentDir.path}');
     
     // Lister le contenu
     try {
       final entities = currentDir.listSync();
-      print('Current directory contents:');
+      debugPrint('Current directory contents:');
       for (final entity in entities) {
-        print('  ${entity.path}');
+        debugPrint('  ${entity.path}');
       }
     } catch (e) {
-      print('Error listing directory: $e');
+      debugPrint('Error listing directory: $e');
     }
   });
 }

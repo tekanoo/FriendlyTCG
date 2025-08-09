@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/services/auto_game_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:friendly_tcg_app/services/auto_game_service.dart';
 
 void main() {
   group('Assets Verification Tests', () {
@@ -9,11 +10,11 @@ void main() {
       
       for (final game in games) {
         final imagePath = game.imagePath;
-        print('Checking: ${game.name} -> $imagePath');
+  debugPrint('Checking: ${game.name} -> $imagePath');
         
         if (imagePath.startsWith('assets/')) {
           // Construire le chemin depuis la racine du projet
-          final filePath = '../${imagePath}';
+          final filePath = '../$imagePath';
           final file = File(filePath);
           
           expect(file.existsSync(), isTrue, 
@@ -28,9 +29,9 @@ void main() {
       final gundamLogoWebp = File('../assets/logo/Gundam/gundam.webp');
       final pokemonLogo = File('../assets/logo/Pokémon/Pokemon-Logo.png');
       
-      print('Gundam PNG exists: ${gundamLogo.existsSync()}');
-      print('Gundam WebP exists: ${gundamLogoWebp.existsSync()}');
-      print('Pokemon PNG exists: ${pokemonLogo.existsSync()}');
+  debugPrint('Gundam PNG exists: ${gundamLogo.existsSync()}');
+  debugPrint('Gundam WebP exists: ${gundamLogoWebp.existsSync()}');
+  debugPrint('Pokemon PNG exists: ${pokemonLogo.existsSync()}');
       
       // Au moins un format doit exister pour Gundam
       expect(gundamLogo.existsSync() || gundamLogoWebp.existsSync(), isTrue,
@@ -45,7 +46,7 @@ void main() {
       
       // Vérifier que les noms de jeux sont cohérents
       final gameNames = games.map((g) => g.name).toList();
-      print('Game names: $gameNames');
+  debugPrint('Game names: $gameNames');
       
       expect(gameNames, contains('Gundam Cards'));
       expect(gameNames, contains('Pokémon'));

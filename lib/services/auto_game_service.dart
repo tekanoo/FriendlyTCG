@@ -86,16 +86,21 @@ class AutoGameService {
     return GeneratedCardsList.getCardPath(extensionId, cardName);
   }
   
-  /// Méthode de debug (vide pour compatibilité)
-  static void debugExtensions() {
-    // Méthode vide pour compatibilité
-  }
+  /// Méthode de debug (placeholder).
+  /// Conservée pour compatibilité avec d'anciens appels éventuels.
+  /// Peut être supprimée en toute sécurité si plus aucune référence.
+  static void debugExtensions() {}
   
   // === Méthodes privées ===
   
   static String _gameNameToId(String gameName) {
     // Convertir le nom en ID (lowercase avec tirets)
     return gameName.toLowerCase().replaceAll(' ', '-');
+  }
+
+  static bool isPokemonGame(String gameName) {
+    final lower = gameName.toLowerCase();
+    return lower.contains('pokemon') || lower.contains('pokémon');
   }
   
   static String _formatGameName(String gameName) {

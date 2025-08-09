@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/services/auto_game_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:friendly_tcg_app/services/auto_game_service.dart';
 
 void main() {
   group('Logo Tests', () {
@@ -23,7 +24,7 @@ void main() {
       for (final game in games) {
         expect(game.imagePath, isNotEmpty);
         expect(game.imagePath, startsWith('assets/'));
-        print('${game.name}: ${game.imagePath}');
+  debugPrint('${game.name}: ${game.imagePath}');
       }
     });
   });

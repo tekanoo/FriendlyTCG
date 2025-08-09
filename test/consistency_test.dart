@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/services/auto_game_service.dart';
-import '../lib/services/generated_cards_list.dart';
+import 'package:flutter/foundation.dart';
+import 'package:friendly_tcg_app/services/auto_game_service.dart';
+import 'package:friendly_tcg_app/services/generated_cards_list.dart';
 
 void main() {
   group('Consistency Verification Tests', () {
@@ -9,18 +10,18 @@ void main() {
       final gameStructure = GeneratedCardsList.getGameStructure();
       final games = AutoGameService.getAllGames();
       
-      print('=== GAME STRUCTURE ===');
+      debugPrint('=== GAME STRUCTURE ===');
       for (final entry in gameStructure.entries) {
-        print('${entry.key}: ${entry.value}');
+        debugPrint('${entry.key}: ${entry.value}');
       }
       
-      print('\n=== GENERATED GAMES ===');
+      debugPrint('\n=== GENERATED GAMES ===');
       for (final game in games) {
-        print('ID: ${game.id}');
-        print('Name: ${game.name}');
-        print('Image: ${game.imagePath}');
-        print('Folder: ${game.folderPath}');
-        print('---');
+        debugPrint('ID: ${game.id}');
+        debugPrint('Name: ${game.name}');
+        debugPrint('Image: ${game.imagePath}');
+        debugPrint('Folder: ${game.folderPath}');
+        debugPrint('---');
       }
       
       // Vérifications de cohérence
@@ -49,7 +50,7 @@ void main() {
           imagePath = 'assets/images/default_game.png';
         }
         
-        print('$gameName -> $imagePath');
+  debugPrint('$gameName -> $imagePath');
         expect(imagePath, startsWith('assets/'));
       }
     });
@@ -57,24 +58,24 @@ void main() {
     test('card path generation consistency', () {
       final extensionIds = GeneratedCardsList.getAllExtensionIds();
       
-      print('=== EXTENSIONS ===');
+      debugPrint('=== EXTENSIONS ===');
       for (final extensionId in extensionIds) {
         final cards = GeneratedCardsList.getCardsByExtensionId(extensionId);
         final gameName = GeneratedCardsList.getGameForExtension(extensionId);
         
-        print('Extension: $extensionId');
-        print('Game: $gameName');
-        print('Cards count: ${cards.length}');
+        debugPrint('Extension: $extensionId');
+        debugPrint('Game: $gameName');
+        debugPrint('Cards count: ${cards.length}');
         
         if (cards.isNotEmpty) {
           final firstCardPath = GeneratedCardsList.getCardPath(extensionId, cards.first);
-          print('First card path: $firstCardPath');
+          debugPrint('First card path: $firstCardPath');
           
           expect(firstCardPath, isNotEmpty);
           expect(firstCardPath, startsWith('assets/images/'));
           expect(firstCardPath, endsWith('.png'));
         }
-        print('---');
+        debugPrint('---');
       }
     });
   });

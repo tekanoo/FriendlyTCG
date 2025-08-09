@@ -43,6 +43,15 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Android keystore / properties (sécurité)
+android/key.properties
+*.keystore
+*.jks
+
+# Firebase / Google services mobiles (si plateformes natives ajoutées plus tard)
+google-services.json
+GoogleService-Info.plist
+
 # Web related
 /web/*.dart.js
 /web/*.dart.js.map
