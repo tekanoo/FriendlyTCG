@@ -11,6 +11,7 @@ import '../widgets/collection_overview_widget.dart';
 import 'games_screen.dart';
 import 'collection_games_screen.dart';
 import 'trades_main_screen.dart';
+import 'community_posts_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+  _tabController = TabController(length: 5, vsync: this);
   WidgetsBinding.instance.addPostFrameCallback((_) => _ensureProfileSetup());
   }
 
@@ -57,14 +58,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final User? user = _authService.currentUser;
-    
+    final photoUrl = user?.photoURL;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Friendly TCG'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          if (photoUrl != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: ()=> Navigator.of(context).pushNamed('/profile'),
+                child: CircleAvatar(radius: 18, backgroundImage: NetworkImage(photoUrl)),
+              ),
+            ),
           PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'logout') {
                 _signOut();
@@ -73,13 +84,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               }
             },
             itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person),
-                    SizedBox(width: 8),
-                    Text('Mon Profil'),
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                      child: photoUrl == null ? const Icon(Icons.person, size: 16) : null,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Mon Profil'),
                   ],
                 ),
               ),
@@ -99,25 +114,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+            unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
           tabs: const [
-            Tab(
-              icon: Icon(Icons.home),
-              text: 'Accueil',
-            ),
-            Tab(
-              icon: Icon(Icons.games),
-              text: 'TCG',
-            ),
-            Tab(
-              icon: Icon(Icons.collections),
-              text: 'Collection',
-            ),
-            Tab(
-              icon: Icon(Icons.swap_horiz),
-              text: 'Échanges',
-            ),
+            Tab(icon: Icon(Icons.home), text: 'Accueil'),
+            Tab(icon: Icon(Icons.games), text: 'TCG'),
+            Tab(icon: Icon(Icons.collections), text: 'Collection'),
+            Tab(icon: Icon(Icons.swap_horiz), text: 'Échanges'),
+            Tab(icon: Icon(Icons.forum), text: 'Communauté'),
           ],
         ),
       ),
@@ -126,23 +130,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           TabBarView(
             controller: _tabController,
             children: [
-              // Onglet Accueil
               _HomeTab(user: user),
-              // Onglet TCG (ex-Extensions)
               const GamesScreen(),
-              // Onglet Collection
               const CollectionGamesScreen(),
-              // Onglet Échanges
               const TradesMainScreen(),
+              const CommunityPostsScreen(),
             ],
           ),
-          // Bouton feedback / contact
-          Positioned(
-            bottom: 24,
-            left: 16,
-            child: _FeedbackButton(),
-          ),
-          // Version en bas à droite
           Positioned(
             bottom: 16,
             right: 16,
@@ -157,11 +151,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 builder: (context, snapshot) {
                   return Text(
                     'v${snapshot.data ?? "1.0.1"}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
                   );
                 },
               ),

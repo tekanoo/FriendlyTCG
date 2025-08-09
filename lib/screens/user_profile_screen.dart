@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user_profile_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_profile_service.dart';
 import '../services/geographic_data.dart';
 import '../widgets/autocomplete_dropdown_field.dart';
@@ -19,6 +20,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   
+  late TextEditingController _displayNameController;
   late TextEditingController _countryController;
   late TextEditingController _regionController;
   late TextEditingController _cityController;
@@ -30,7 +32,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _countryController = TextEditingController();
+  _displayNameController = TextEditingController();
+  _countryController = TextEditingController();
     _regionController = TextEditingController();
     _cityController = TextEditingController();
     _loadProfile();
@@ -39,7 +42,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   void dispose() {
-    _countryController.dispose();
+  _displayNameController.dispose();
+  _countryController.dispose();
     _regionController.dispose();
     _cityController.dispose();
     super.dispose();
@@ -88,6 +92,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (mounted) {
         setState(() {
           _currentProfile = profile;
+          _displayNameController.text = profile?.displayName ?? '';
           _countryController.text = profile?.country ?? '';
           _regionController.text = profile?.region ?? '';
           _cityController.text = profile?.city ?? '';
@@ -124,9 +129,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     // Vérifications supplémentaires pour s'assurer que les valeurs sont valides
-    final country = _countryController.text.trim();
+  final displayName = _displayNameController.text.trim();
+  final country = _countryController.text.trim();
     final region = _regionController.text.trim();
     final city = _cityController.text.trim();
+
+    if (displayName.isEmpty || displayName.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nom d\'affichage trop court (min 3)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     if (country.isEmpty || !_availableCountries.contains(country)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,11 +179,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     try {
       debugPrint('🔄 Sauvegarde du profil avec: country="$country", region="$region", city="$city"');
       
-      final success = await _profileService.updateUserLocation(
-        country: country,
-        region: region,
-        city: city,
-      );
+      // Mettre à jour Firestore (displayName + localisation)
+      final user = FirebaseAuth.instance.currentUser;
+      bool success = false;
+      if (user != null) {
+        success = await _profileService.updateUserProfile(
+          UserProfileModel(
+            uid: user.uid,
+            email: user.email,
+            displayName: displayName,
+            photoURL: user.photoURL,
+            country: country,
+            region: region,
+            city: city,
+            lastSeen: DateTime.now(),
+            lastUpdated: DateTime.now(),
+          ),
+        );
+      }
 
       if (mounted) {
         if (success) {
@@ -260,12 +289,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               const SizedBox(height: 16),
-                              if (_currentProfile!.displayName != null)
-                                ListTile(
-                                  leading: const Icon(Icons.person),
-                                  title: Text(_currentProfile!.displayName!),
-                                  subtitle: const Text('Nom d\'affichage'),
+                              TextFormField(
+                                controller: _displayNameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Nom d\'affichage',
+                                  prefixIcon: Icon(Icons.person),
                                 ),
+                                maxLength: 32,
+                                validator: (v){
+                                  if (v==null || v.trim().length <3) return 'Min 3 caractères';
+                                  return null;
+                                },
+                              ),
                               if (_currentProfile!.email != null)
                                 ListTile(
                                   leading: const Icon(Icons.email),
