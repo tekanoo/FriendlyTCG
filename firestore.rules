@@ -39,5 +39,81 @@ service cloud.firestore {
     match /test/{document} {
       allow read, write: if request.auth != null;
     }
+
+    // ---------------------------
+    // Communauté : Posts publics
+    // ---------------------------
+    match /posts/{postId} {
+      // Tous les utilisateurs (même non connectés) peuvent lire les posts
+      allow read: if true;
+
+      // Création uniquement pour utilisateur connecté avec contraintes
+      allow create: if request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.text is string
+        && (request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.likeCount == 0;
+
+      // Mise à jour:
+      //  - L'auteur peut (optionnel) éditer le texte (limite longueur) sans toucher aux champs protégés
+      //  - OU n'importe quel utilisateur connecté peut mettre à jour likeCount UNIQUEMENT (±1) sans modifier les autres champs
+      allow update: if request.auth != null && (
+          // Cas 1: auteur édite le texte
+          (request.auth.uid == resource.data.authorUid
+            && request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.likeCount == resource.data.likeCount
+            && request.resource.data.text is string
+            && (request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000)
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.keys().hasOnly(['text','authorUid','authorName','authorPhoto','createdAt','likeCount']))
+          ||
+          // Cas 2: simple ajustement likeCount (±1) par un utilisateur connecté
+          (request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.text == resource.data.text
+            && request.resource.data.authorName == resource.data.authorName
+            && request.resource.data.authorPhoto == resource.data.authorPhoto
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.likeCount is int
+            && (request.resource.data.likeCount == resource.data.likeCount + 1 || request.resource.data.likeCount == resource.data.likeCount - 1)
+            && request.resource.data.keys().hasOnly(['text','authorUid','authorName','authorPhoto','createdAt','likeCount']) )
+        );
+
+      // Suppression uniquement par l'auteur (optionnel)
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorUid;
+
+      // Sous-collection Likes: un doc par utilisateur
+      match /likes/{userId} {
+        allow read: if true;
+        allow create: if request.auth != null && request.auth.uid == userId
+          && !exists(/databases/$(database)/documents/posts/$(postId)/likes/$(userId));
+        allow delete: if request.auth != null && request.auth.uid == userId;
+        allow update: if false; // Pas d'update, juste create/delete
+      }
+
+      // Sous-collection Comments
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.text is string
+          && (request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 3000)
+          && request.resource.data.createdAt == request.time;
+        allow update: if false; // édition désactivée pour simplicité
+        allow delete: if request.auth != null && request.auth.uid == resource.data.authorUid;
+      }
+    }
+
+    // ---------------------------
+    // Feedback (optionnel) - lecture interdite sauf si propriétaire
+    // ---------------------------
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null
+        && request.resource.data.text is string
+        && (request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 5000);
+      // Lecture des feedbacks: restreindre à l'auteur (ou désactiver complètement)
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

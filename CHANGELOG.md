@@ -59,3 +59,10 @@
 - Onboarding: listes déroulantes Pays / Région avec filtrage dynamique (aligné futur écran profil).
 - Lint: corrections interpolations inutiles dans `trades_screen.dart`.
 - Bump version `pubspec.yaml` → 1.1.14+24.
+
+## 1.1.15+25
+- Communauté: écran de posts (création, like, commentaires) + fiche détaillée.
+- Règles Firestore ajoutées pour `posts` (+ sous-collections `likes`, `comments`) avec contraintes d'intégrité et limites longueur.
+- Règles Firestore `feedback` (écriture + lecture restreinte auteur) ajoutées.
+- Protection likeCount (incrément/décrément contrôlé) & like unique par utilisateur.
+- Bump version `pubspec.yaml` → 1.1.15+25.

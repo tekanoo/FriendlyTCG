@@ -4,8 +4,8 @@
 
 Application Flutter (Web-first) de gestion de collection et d'échanges de cartes TCG multi-jeux.
 
-**Version actuelle : 1.1.14+24**  
-Onboarding première connexion (dialogue unique) + listes déroulantes pays/région, échanges bulk doublons, feedback Firestore.
+**Version actuelle : 1.1.15+25**  
+Communauté (posts, likes, commentaires) + règles Firestore sécurisées, onboarding première connexion, échanges bulk doublons, feedback Firestore.
 
 </div>
 
@@ -178,8 +178,8 @@ Branche dédiée + PR + tests OK + mise à jour changelog si nécessaire.
 
 ---
 
-## 📬 Support & Feedback
-Utilisez la bulle flottante (coin inférieur gauche) pour envoyer un feedback directement (stocké dans Firestore). Pas d'email externe requis.
+## 📬 Support & Feedback / Communauté
+Publiez un post dans l'onglet Communauté ou envoyez un feedback (stocké dans Firestore, lecture restreinte). Likes & commentaires en temps réel.
 
 ---
 

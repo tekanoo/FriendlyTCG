@@ -49,6 +49,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> {
         'likeCount': 0,
       });
       _postController.clear();
+  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post publié')));
     } finally {
       if (mounted) setState(()=> _publishing = false);
     }
@@ -72,11 +73,11 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> {
     });
   }
 
-  void _openComments(DocumentSnapshot postDoc) {
+  void _openPost(DocumentSnapshot postDoc) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => CommentsSheet(postDoc: postDoc),
+      builder: (ctx) => PostDetailSheet(postDoc: postDoc, onToggleLike: ()=> _toggleLike(postDoc)),
     );
   }
 
@@ -142,31 +143,34 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> {
                     final authorPhoto = data['authorPhoto'] as String?;
                     final likeCount = data['likeCount'] ?? 0;
                     final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(radius: 18, backgroundImage: authorPhoto!=null? NetworkImage(authorPhoto):null, child: authorPhoto==null? const Icon(Icons.person):null),
-                                const SizedBox(width: 10),
-                                Expanded(child: Text(authorName, style: const TextStyle(fontWeight: FontWeight.bold))),
-                                if (createdAt != null)
-                                  Text(_formatDate(createdAt), style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(data['text'] ?? ''),
-                            const SizedBox(height: 12),
-                            _PostActions(
-                              postDoc: d,
-                              likeCount: likeCount,
-                              onLike: () => _toggleLike(d),
-                              onComments: () => _openComments(d),
-                            ),
-                          ],
+                    return InkWell(
+                      onTap: () => _openPost(d),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(radius: 18, backgroundImage: authorPhoto!=null? NetworkImage(authorPhoto):null, child: authorPhoto==null? const Icon(Icons.person):null),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(authorName, style: const TextStyle(fontWeight: FontWeight.bold))),
+                                  if (createdAt != null)
+                                    Text(_formatDate(createdAt), style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(data['text'] ?? '', maxLines: 5, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 12),
+                              _InlinePostActions(
+                                postDoc: d,
+                                likeCount: likeCount,
+                                onLike: () => _toggleLike(d),
+                                onOpen: () => _openPost(d),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -191,21 +195,203 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> {
   }
 }
 
-class _PostActions extends StatelessWidget {
+class _InlinePostActions extends StatelessWidget {
   final DocumentSnapshot postDoc;
   final int likeCount;
   final VoidCallback onLike;
-  final VoidCallback onComments;
-  const _PostActions({required this.postDoc, required this.likeCount, required this.onLike, required this.onComments});
+  final VoidCallback onOpen;
+  const _InlinePostActions({required this.postDoc, required this.likeCount, required this.onLike, required this.onOpen});
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     return Row(
       children: [
-        IconButton(onPressed: onLike, icon: const Icon(Icons.thumb_up_alt_outlined)),
+        // Like status
+        if (user != null)
+          StreamBuilder<DocumentSnapshot>(
+            stream: postDoc.reference.collection('likes').doc(user.uid).snapshots(),
+            builder: (context, snap) {
+              final liked = snap.data?.exists == true;
+              return IconButton(
+                onPressed: onLike,
+                icon: Icon(liked ? Icons.thumb_up_alt : Icons.thumb_up_alt_outlined, color: liked ? Colors.blue : null),
+              );
+            },
+          ),
         Text('$likeCount'),
         const SizedBox(width: 16),
-        TextButton.icon(onPressed: onComments, icon: const Icon(Icons.comment, size: 18), label: const Text('Commentaires')),
+        TextButton.icon(onPressed: onOpen, icon: const Icon(Icons.comment, size: 18), label: const Text('Ouvrir')),
       ],
+    );
+  }
+}
+
+class PostDetailSheet extends StatelessWidget {
+  final DocumentSnapshot postDoc;
+  final VoidCallback onToggleLike;
+  const PostDetailSheet({super.key, required this.postDoc, required this.onToggleLike});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = postDoc.data() as Map<String,dynamic>;
+    final user = FirebaseAuth.instance.currentUser;
+    final authorPhoto = data['authorPhoto'] as String?;
+    final authorName = data['authorName'] ?? 'Utilisateur';
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+    final likeCount = data['likeCount'] ?? 0;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.9,
+      builder: (ctx, scrollController) {
+        return Material(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          child: Column(
+            children: [
+              Container(width: 48,height:4,margin: const EdgeInsets.symmetric(vertical:12),decoration: BoxDecoration(color: Colors.grey[400],borderRadius: BorderRadius.circular(2))),
+              ListTile(
+                leading: CircleAvatar(radius: 22, backgroundImage: authorPhoto!=null? NetworkImage(authorPhoto):null, child: authorPhoto==null? const Icon(Icons.person):null),
+                title: Text(authorName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: createdAt!=null? Text(_formatDetailDate(createdAt), style: TextStyle(color: Colors.grey[600])): null,
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal:16, vertical: 8),
+                  children: [
+                    Text(data['text'] ?? '', style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        if (user!=null)
+                          StreamBuilder<DocumentSnapshot>(
+                            stream: postDoc.reference.collection('likes').doc(user.uid).snapshots(),
+                            builder: (context, snap) {
+                              final liked = snap.data?.exists == true;
+                              return IconButton(
+                                onPressed: onToggleLike,
+                                icon: Icon(liked ? Icons.thumb_up_alt : Icons.thumb_up_alt_outlined, color: liked ? Colors.blue : null),
+                              );
+                            },
+                          ),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: postDoc.reference.collection('likes').snapshots(),
+                          builder: (context, snap){
+                            final count = snap.data?.docs.length ?? likeCount;
+                            return Text('$count likes');
+                          },
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    const Text('Commentaires', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    _CommentsList(postDoc: postDoc),
+                  ],
+                ),
+              ),
+              if (user!=null) _CommentComposer(postDoc: postDoc),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDetailDate(DateTime dt) => '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
+}
+
+class _CommentsList extends StatelessWidget {
+  final DocumentSnapshot postDoc;
+  const _CommentsList({required this.postDoc});
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: postDoc.reference.collection('comments').orderBy('createdAt', descending: true).limit(200).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) return const Text('Aucun commentaire.');
+        return Column(
+          children: [
+            for (final d in docs)
+              _SingleCommentTile(data: d.data() as Map<String,dynamic>),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SingleCommentTile extends StatelessWidget {
+  final Map<String,dynamic> data;
+  const _SingleCommentTile({required this.data});
+  @override
+  Widget build(BuildContext context) {
+    final photo = data['authorPhoto'] as String?;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(radius: 16, backgroundImage: photo!=null? NetworkImage(photo):null, child: photo==null? const Icon(Icons.person,size:16):null),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(data['authorName'] ?? 'Utilisateur', style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(data['text'] ?? ''),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _CommentComposer extends StatefulWidget {
+  final DocumentSnapshot postDoc;
+  const _CommentComposer({required this.postDoc});
+  @override
+  State<_CommentComposer> createState() => _CommentComposerState();
+}
+
+class _CommentComposerState extends State<_CommentComposer> {
+  final _auth = FirebaseAuth.instance;
+  final _controller = TextEditingController();
+  bool _sending = false;
+  @override
+  void dispose(){ _controller.dispose(); super.dispose(); }
+  Future<void> _send() async {
+    final user = _auth.currentUser; if (user == null) return; final text = _controller.text.trim(); if (text.isEmpty) return;
+    setState(()=> _sending = true);
+    try {
+      await widget.postDoc.reference.collection('comments').add({
+        'text': text,
+        'authorUid': user.uid,
+        'authorName': user.displayName,
+        'authorPhoto': user.photoURL,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      _controller.clear();
+    } finally { if (mounted) setState(()=> _sending = false); }
+  }
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12,4,12,8),
+        child: Row(
+          children: [
+            Expanded(child: TextField(controller: _controller, minLines:1, maxLines:4, decoration: const InputDecoration(hintText: 'Commenter...'))),
+            const SizedBox(width: 8),
+            IconButton(onPressed: _sending? null : _send, icon: _sending? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)) : const Icon(Icons.send))
+          ],
+        ),
+      ),
     );
   }
 }
