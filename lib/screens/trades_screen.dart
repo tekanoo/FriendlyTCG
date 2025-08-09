@@ -50,6 +50,7 @@ class _TradesScreenState extends State<TradesScreen> {
   
   // Filtre des cartes
   bool _showOnlyUnowned = false;
+  bool _showOnlyOwnedDuplicates = false; // afficher uniquement mes doublons lors de la sélection d'offres
 
   // Helper: total cartes filtrées (après filtre owned / tri non requis pour le count)
   int get _totalFilteredCardsCount {
@@ -943,6 +944,20 @@ class _TradesScreenState extends State<TradesScreen> {
                     },
                   ),
                   const Text('Afficher uniquement les cartes non possédées'),
+                  const SizedBox(width: 16),
+                  Checkbox(
+                    value: _showOnlyOwnedDuplicates,
+                    onChanged: (value) {
+                      setState(() {
+                        _showOnlyOwnedDuplicates = value ?? false;
+                        if (_showOnlyOwnedDuplicates) {
+                          _showOnlyUnowned = false; // incompatibles logiquement
+                        }
+                        _currentPage = 0;
+                      });
+                    },
+                  ),
+                  const Text('Mes doublons (>1)'),
                 ],
               ),
               Row(
@@ -1114,18 +1129,22 @@ class _TradesScreenState extends State<TradesScreen> {
   }
 
   List<String> _getFilteredCards(List<String> sortedCards) {
-    if (!_showOnlyUnowned) {
-      return sortedCards;
-    }
-    
-    List<String> filteredCards = [];
-    for (String card in sortedCards) {
-      final quantity = _collectionService.getCardQuantity(card);
-      if (quantity == 0) {
-        filteredCards.add(card);
+    List<String> working = sortedCards;
+    if (_showOnlyUnowned) {
+      final unowned = <String>[];
+      for (final card in working) {
+        if (_collectionService.getCardQuantity(card) == 0) unowned.add(card);
       }
+      working = unowned;
     }
-    return filteredCards;
+    if (_showOnlyOwnedDuplicates) {
+      final dups = <String>[];
+      for (final card in working) {
+        if (_collectionService.getCardQuantity(card) > 1) dups.add(card);
+      }
+      working = dups;
+    }
+    return working;
   }
 
 }

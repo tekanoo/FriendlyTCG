@@ -109,9 +109,11 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
   }
 
   Widget _buildGlobalStats() {
-    final totalOwnedCards = _gameStats.fold<int>(0, (sum, game) => sum + game.totalOwnedCards);
-    final totalAvailableCards = _gameStats.fold<int>(0, (sum, game) => sum + game.totalAvailableCards);
-    final globalPercentage = totalAvailableCards > 0 ? (totalOwnedCards / totalAvailableCards) * 100 : 0;
+  final totalOwnedCopies = _gameStats.fold<int>(0, (sum, game) => sum + game.totalOwnedCards);
+  final totalOwnedUnique = _gameStats.fold<int>(0, (sum, game) => sum + game.totalOwnedUniqueCards);
+  final totalDuplicateCopies = totalOwnedCopies - totalOwnedUnique;
+  final totalAvailableCards = _gameStats.fold<int>(0, (sum, game) => sum + game.totalAvailableCards);
+  final globalPercentage = totalAvailableCards > 0 ? (totalOwnedUnique / totalAvailableCards) * 100 : 0;
 
     return Card(
       child: Padding(
@@ -134,27 +136,10 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: _buildStatItem(
-                    'Cartes Possédées',
-                    '$totalOwnedCards',
-                    Colors.green,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'Total Disponible',
-                    '$totalAvailableCards',
-                    Colors.blue,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'Completion',
-                    '${globalPercentage.toStringAsFixed(1)}%',
-                    Colors.orange,
-                  ),
-                ),
+                Expanded(child: _buildStatItem('Copies', '$totalOwnedCopies', Colors.green)),
+                Expanded(child: _buildStatItem('Uniques', '$totalOwnedUnique', Colors.blue)),
+                Expanded(child: _buildStatItem('Doublons', '$totalDuplicateCopies', Colors.purple)),
+                Expanded(child: _buildStatItem('Progression', '${globalPercentage.toStringAsFixed(1)}%', Colors.orange)),
               ],
             ),
             const SizedBox(height: 12),
@@ -238,12 +223,13 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${gameStat.totalOwnedCards} / ${gameStat.totalAvailableCards} cartes',
+                              // Show unique progression (unique / total) and copies separately
+                              '${gameStat.totalOwnedUniqueCards} / ${gameStat.totalAvailableCards} uniques (${gameStat.totalOwnedCards} copies)',
                               style: Theme.of(context).textTheme.bodyLarge,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${gameStat.completionPercentage.toStringAsFixed(1)}% complété',
+                              '${gameStat.completionPercentage.toStringAsFixed(1)}% (uniques) • ${gameStat.totalOwnedCards - gameStat.totalOwnedUniqueCards} doublon(s)',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14,
@@ -341,10 +327,19 @@ class _CollectionOverviewWidgetState extends State<CollectionOverviewWidget> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${extension.ownedCards} / ${extension.totalCards} cartes',
+                  '${extension.ownedUniqueCards} / ${extension.totalCards} uniques (${extension.ownedCards} copies)',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${extension.duplicateCards} doublon(s)',
+                  style: TextStyle(
+                    color: Colors.purple[600],
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
                 const SizedBox(height: 8),

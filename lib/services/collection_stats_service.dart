@@ -22,15 +22,17 @@ class CollectionStatsService {
       final extensions = _extensionService.getExtensionsForGame(game.id);
       final List<ExtensionStats> extensionStats = [];
       
-      int totalGameOwnedCards = 0;
-      int totalGameAvailableCards = 0;
+  int totalGameOwnedCards = 0; // copies (avec doublons)
+  int totalGameOwnedUniqueCards = 0; // uniques
+  int totalGameAvailableCards = 0; // uniques disponibles
 
       for (final extension in extensions) {
         final extensionStat = _calculateExtensionStats(extension, userCollection);
         extensionStats.add(extensionStat);
         
-        totalGameOwnedCards += extensionStat.ownedCards;
-        totalGameAvailableCards += extensionStat.totalCards;
+  totalGameOwnedCards += extensionStat.ownedCards;
+  totalGameOwnedUniqueCards += extensionStat.ownedUniqueCards;
+  totalGameAvailableCards += extensionStat.totalCards;
       }
 
       gameStats.add(CollectionStats(
@@ -38,6 +40,7 @@ class CollectionStatsService {
         gameName: game.name,
         extensions: extensionStats,
         totalOwnedCards: totalGameOwnedCards,
+        totalOwnedUniqueCards: totalGameOwnedUniqueCards,
         totalAvailableCards: totalGameAvailableCards,
       ));
     }
@@ -48,7 +51,8 @@ class CollectionStatsService {
   /// Calcule les statistiques pour une extension spécifique
   ExtensionStats _calculateExtensionStats(ExtensionModel extension, Map<String, int> userCollection) {
     final List<String> ownedCardNames = [];
-    int ownedCardsCount = 0;
+  int ownedCardsCopiesCount = 0; // copies totales
+  int ownedUniqueCount = 0; // uniques
     int totalCardsCount = extension.cardImages.length;
 
     // Parcourir toutes les cartes de l'extension
@@ -65,7 +69,8 @@ class CollectionStatsService {
         
         if (totalQuantity > 0) {
           ownedCardNames.add(cardName);
-          ownedCardsCount += totalQuantity;
+          ownedCardsCopiesCount += totalQuantity; // toutes les copies
+          ownedUniqueCount += 1; // 1 unique si au moins une variante
         }
         
         // Pour les Pokémon, multiplier par 2 le nombre total de cartes disponibles
@@ -76,7 +81,8 @@ class CollectionStatsService {
         final quantity = userCollection[cardName] ?? 0;
         if (quantity > 0) {
           ownedCardNames.add(cardName);
-          ownedCardsCount += quantity;
+          ownedCardsCopiesCount += quantity;
+          ownedUniqueCount += 1;
         }
       }
     }
@@ -84,7 +90,8 @@ class CollectionStatsService {
     return ExtensionStats(
       extensionId: extension.id,
       extensionName: extension.name,
-      ownedCards: ownedCardsCount,
+      ownedCards: ownedCardsCopiesCount,
+      ownedUniqueCards: ownedUniqueCount,
       totalCards: totalCardsCount,
       ownedCardNames: ownedCardNames,
     );

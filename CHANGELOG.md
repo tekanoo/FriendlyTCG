@@ -41,3 +41,9 @@
 - Version dynamique sur l'écran principal (lecture package_info_plus).
 - Échanges agrégés: création d'échanges individuels par carte via un dialog de sélection d'une carte offerte (quantités affichées).
 - Ajout état visuel (chip validée) après création d'un échange + bouton "Tout échanger" (création séquentielle pour chaque carte restante).
+
+## 1.1.12+22
+- Échanges: recherche filtrée sur doublons des autres utilisateurs (onlyDuplicates) + dialog bulk avec images / quantités.
+- Échanges: filtre optionnel "Mes doublons (>1)" lors de la sélection des cartes (affiche uniquement les cartes que l'on possède en plusieurs exemplaires avant recherche).
+- Dashboard Collection: Progression basée sur cartes uniques; affichage séparé Copies / Uniques / Doublons globalement, par jeu et par extension.
+- Modèles stats mis à jour (ownedUnique vs owned copies) sans impact sur API externe.
