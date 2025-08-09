@@ -49,8 +49,8 @@ class UserWithLocation {
 
   // Nouvelle méthode pour obtenir l'affichage de localisation
   String get locationDisplay {
+    // Ville retirée de l'affichage pour anonymisation / simplification.
     List<String> parts = [];
-    if (city?.isNotEmpty == true) parts.add(city!);
     if (region?.isNotEmpty == true) parts.add(region!);
     if (country?.isNotEmpty == true) parts.add(country!);
     return parts.join(', ');

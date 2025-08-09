@@ -13,3 +13,8 @@
 - Documentation placeholder `debugExtensions()`.
 - Archivage du test exploratoire `file_system_test.dart` (déplacé vers `test/_archive/file_system_test_skip.dart`).
 - Renforcement `.gitignore` (keystore, google-services, plist, keystore/jks).
+
+## 1.1.6+16
+- Échanges: suppression de l'affichage de la ville, affichage uniquement de la région.
+- Ajout fichier `french_regions.dart` (13 régions métropolitaines) et filtre Région dans `TradesScreen` (étape cartes).
+- Dépréciation implicite du champ `city` dans `locationDisplay` (non affiché).

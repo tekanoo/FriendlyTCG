@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/trade_service.dart';
+import '../data/french_regions.dart';
 import '../services/game_service.dart';
 import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
@@ -26,6 +27,7 @@ class _TradesScreenState extends State<TradesScreen> {
   
   final List<String> _selectedCards = [];
   Map<String, List<UserWithLocation>> _searchResults = {};
+  String? _selectedRegionFilter; // Région sélectionnée pour filtrer les résultats
   bool _isSearching = false;
   
   // Sélection progressive
@@ -101,6 +103,10 @@ class _TradesScreenState extends State<TradesScreen> {
 
     try {
       final results = await _tradeService.findUsersWithCardsAndLocation(_selectedCards);
+      // Appliquer filtre région si défini (uniquement 13 régions métropole)
+      if (_selectedRegionFilter != null) {
+        results.updateAll((card, users) => users.where((u) => (u.region ?? '') == _selectedRegionFilter).toList());
+      }
       setState(() {
         _searchResults = results;
       });
@@ -192,6 +198,62 @@ class _TradesScreenState extends State<TradesScreen> {
           ),
           const SizedBox(height: 8),
           _buildProgressIndicator(),
+          const SizedBox(height: 12),
+          // Filtre Région (affiché à partir de l'étape 2 pour pertinence)
+          if (_currentStep == 2)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  const Text('Région:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  DropdownButton<String>(
+                    hint: const Text('Toutes'),
+                    value: _selectedRegionFilter,
+                    items: [
+                      const DropdownMenuItem<String>(value: null, child: Text('Toutes')), // non valide directement, géré autrement
+                      ...FrenchRegions.regions.map((r) => DropdownMenuItem<String>(value: r, child: Text(r))).toList(),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        // Hack: Dropdown ne supporte pas item null directement; on gère reset via valeur spéciale
+                        if (val == null) {
+                          _selectedRegionFilter = null;
+                        } else {
+                          _selectedRegionFilter = val;
+                        }
+                      });
+                      // Refiltrer résultats existants sans relancer Firestore pour éviter coût
+                      if (_searchResults.isNotEmpty) {
+                        if (_selectedRegionFilter == null) {
+                          // Relancer recherche pour restaurer tous les utilisateurs
+                          _searchForCardOwners();
+                        } else {
+                          setState(() {
+                            _searchResults = _searchResults.map((key, users) => MapEntry(
+                              key,
+                              users.where((u) => (u.region ?? '') == _selectedRegionFilter).toList(),
+                            ));
+                          });
+                        }
+                      }
+                    },
+                  ),
+                  if (_selectedRegionFilter != null)
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedRegionFilter = null;
+                        });
+                        _searchForCardOwners();
+                      },
+                      child: const Text('Réinitialiser'),
+                    ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -686,9 +748,9 @@ class _TradesScreenState extends State<TradesScreen> {
                                           user.displayName ?? 'Utilisateur anonyme',
                                           style: const TextStyle(fontWeight: FontWeight.bold),
                                         ),
-                                        if (user.city != null)
+                                        if (user.region != null)
                                           Text(
-                                            '📍 ${user.city}',
+                                            '📍 ${user.region}',
                                             style: TextStyle(
                                               color: Colors.grey.shade600,
                                               fontSize: 12,
