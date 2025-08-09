@@ -27,3 +27,6 @@
 	- `trades_screen.dart` (sélection jeu + cartes)
 	- `screen_size_test_screen.dart`
 - Suppression des calculs locaux d'aspect ratio redondants (géré dans `AdaptiveCardGrid`).
+
+## 1.1.8+18
+- Correction: le bouton de tri (A-Z / Z-A) n'inversait pas l'ordre sans recherche dans `extension_gallery_screen.dart`.

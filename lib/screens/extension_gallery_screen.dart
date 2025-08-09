@@ -41,8 +41,11 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
   List<CardModel> get filteredCards {
     List<CardModel> result;
     if (searchQuery.isEmpty) {
-      // Quand pas de recherche, respecter l'ordre du fichier généré
+      // Quand pas de recherche, respecter l'ordre du fichier généré (asc) ou inverser si tri descendant demandé
       result = List.from(cards);
+      if (!_sortAscending) {
+        result = result.reversed.toList();
+      }
     } else {
       // Lors d'une recherche, filtrer puis trier
       result = cards.where((card) =>
