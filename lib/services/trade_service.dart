@@ -32,7 +32,7 @@ class TradeService {
   }
 
   // Rechercher les utilisateurs qui possèdent des cartes spécifiques avec localisation
-  Future<Map<String, List<UserWithLocation>>> findUsersWithCardsAndLocation(List<String> cardNames) async {
+  Future<Map<String, List<UserWithLocation>>> findUsersWithCardsAndLocation(List<String> cardNames, {bool onlyDuplicates = false}) async {
     try {
       final Map<String, List<UserWithLocation>> result = {};
       
@@ -58,6 +58,9 @@ class TradeService {
           // Vérifier quelles cartes cet utilisateur possède
           for (String cardName in cardNames) {
             if (user.hasCard(cardName)) {
+              if (onlyDuplicates && user.getCardQuantity(cardName) <= 1) {
+                continue; // ignorer si pas de doublon demandé
+              }
               result[cardName]!.add(user);
             }
           }

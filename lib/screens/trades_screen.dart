@@ -30,6 +30,8 @@ class _TradesScreenState extends State<TradesScreen> {
   Map<String, List<UserWithLocation>> _searchResults = {};
   String? _selectedRegionFilter; // Région sélectionnée pour filtrer les résultats
   bool _isSearching = false;
+  // Garder trace des échanges déjà créés (userId::cardName)
+  final Set<String> _createdTrades = {};
   
   // Sélection progressive
   GameModel? _selectedGame;
@@ -112,7 +114,7 @@ class _TradesScreenState extends State<TradesScreen> {
     });
 
     try {
-      final results = await _tradeService.findUsersWithCardsAndLocation(_selectedCards);
+  final results = await _tradeService.findUsersWithCardsAndLocation(_selectedCards, onlyDuplicates: true);
       // Appliquer filtre région si défini (uniquement 13 régions métropole)
       if (_selectedRegionFilter != null) {
         results.updateAll((card, users) => users.where((u) => (u.region ?? '') == _selectedRegionFilter).toList());
@@ -754,15 +756,33 @@ class _TradesScreenState extends State<TradesScreen> {
                       children: [
                         ElevatedButton.icon(
                           onPressed: () async {
-                            // Batch create trades for all remaining cards
                             final offerable = await _getOfferableCardsForUser(user.uid);
-                            for (final wanted in agg.cards) {
-                              if (!mounted) break;
-                              final offered = offerable.isNotEmpty ? offerable.first : null;
-                              if (offered == null) break; // rien à offrir
-                              await _createSingleTrade(wanted, offered, user);
+                            if (!mounted) return;
+                            if (offerable.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Aucune carte à offrir.')),
+                              );
+                              return;
                             }
-                            setState(() {});
+                            final duplicateWanted = agg.cards; // déjà filtré sur doublons via recherche
+                            final result = await showDialog<_BulkTradeResult>(
+                              context: context,
+                              builder: (ctx) => _BulkTradesDialog(
+                                user: user,
+                                wantedCards: duplicateWanted,
+                                offerableCards: offerable,
+                                collectionService: _collectionService,
+                                extensionId: _selectedExtension?.id,
+                              ),
+                            );
+                            if (result != null && result.trades.isNotEmpty) {
+                              for (final entry in result.trades.entries) {
+                                final wanted = entry.key;
+                                final offered = entry.value;
+                                await _createSingleTrade(wanted, offered, user);
+                              }
+                              if (mounted) setState(() {});
+                            }
                           },
                           icon: const Icon(Icons.all_inbox),
                           label: const Text('Tout échanger'),
@@ -817,6 +837,7 @@ class _TradesScreenState extends State<TradesScreen> {
         offeredCard: offered,
       );
       if (tradeId != null && mounted) {
+  _createdTrades.add('${targetUser.uid}::$wanted');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Échange créé pour ${wanted.replaceAll('.png', '')}')),
         );
@@ -832,10 +853,20 @@ class _TradesScreenState extends State<TradesScreen> {
 
   Widget _buildUserCardTradeChip(UserWithLocation user, String cardName) {
     final displayName = cardName.replaceAll('.png', '');
+    final tradedKey = '${user.uid}::$cardName';
+    final alreadyTraded = _createdTrades.contains(tradedKey);
     return InputChip(
-      label: Text(displayName, overflow: TextOverflow.ellipsis),
-      avatar: const Icon(Icons.add, size: 16),
-      onPressed: () async {
+      label: Text(
+        alreadyTraded ? '$displayName (ok)' : displayName,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          decoration: alreadyTraded ? TextDecoration.lineThrough : null,
+          color: alreadyTraded ? Colors.grey : null,
+          fontStyle: alreadyTraded ? FontStyle.italic : null,
+        ),
+      ),
+      avatar: Icon(alreadyTraded ? Icons.check : Icons.add, size: 16, color: alreadyTraded ? Colors.green : null),
+      onPressed: alreadyTraded ? null : () async {
         final offerable = await _getOfferableCardsForUser(user.uid);
         if (!mounted) return;
         if (offerable.isEmpty) {
@@ -852,10 +883,13 @@ class _TradesScreenState extends State<TradesScreen> {
               await _createSingleTrade(wanted, offered, user);
               return '';
             },
+            extensionId: _selectedExtension?.id,
           ),
         );
         if (created == true) setState(() {});
       },
+      selected: alreadyTraded,
+      backgroundColor: alreadyTraded ? Colors.green.shade50 : null,
     );
   }
 
@@ -1107,11 +1141,13 @@ class _SingleTradeDialog extends StatefulWidget {
   final String wantedCard;
   final List<String> offerableCards; // cartes possédées non possédées par l'autre
   final Future<String?> Function(String wanted, String offered) onCreate;
+  final String? extensionId; // pour images
 
   const _SingleTradeDialog({
     required this.wantedCard,
     required this.offerableCards,
     required this.onCreate,
+  this.extensionId,
   });
 
   @override
@@ -1131,6 +1167,16 @@ class _SingleTradeDialogState extends State<_SingleTradeDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
             children: [
+              if (widget.extensionId != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom:8.0),
+                  child: Image.asset(
+                    AutoGameService.getCardImagePath(widget.extensionId!, widget.wantedCard),
+                    height: 140,
+                    fit: BoxFit.contain,
+                    errorBuilder: (c,_,__)=>(const Icon(Icons.image_not_supported,size:48,color: Colors.grey)),
+                  ),
+                ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Choisissez la carte que vous offrez:', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
@@ -1146,11 +1192,33 @@ class _SingleTradeDialogState extends State<_SingleTradeDialog> {
                         final display = card.replaceAll('.png', '');
                         final selected = _selectedOffered == card;
                         return ListTile(
-                          title: Text(display),
-                          leading: Radio<String>(
-                            value: card,
-                            groupValue: _selectedOffered,
-                            onChanged: (v) => setState(() => _selectedOffered = v),
+                          leading: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Radio<String>(
+                                value: card,
+                                groupValue: _selectedOffered,
+                                onChanged: (v) => setState(() => _selectedOffered = v),
+                              ),
+                            ],
+                          ),
+                          title: Row(
+                            children: [
+                              if (widget.extensionId != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right:8.0),
+                                  child: SizedBox(
+                                    width: 44,
+                                    height: 60,
+                                    child: Image.asset(
+                                      AutoGameService.getCardImagePath(widget.extensionId!, card),
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (c,_,__)=>(const Icon(Icons.image_not_supported,size:20,color: Colors.grey)),
+                                    ),
+                                  ),
+                                ),
+                              Expanded(child: Text(display)),
+                            ],
                           ),
                           trailing: _CardOwnedQuantityBadge(cardName: card),
                           onTap: () => setState(() => _selectedOffered = card),
@@ -1196,6 +1264,217 @@ class _CardOwnedQuantityBadge extends StatelessWidget {
         border: Border.all(color: qty>0? Colors.green : Colors.grey.shade400,width:1),
       ),
       child: Text('x$qty', style: TextStyle(fontSize:12,color: qty>0? Colors.green.shade800: Colors.grey.shade600,fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+// Résultat de la sélection bulk : map wanted->offered
+class _BulkTradeResult {
+  final Map<String, String> trades;
+  _BulkTradeResult(this.trades);
+}
+
+class _BulkTradesDialog extends StatefulWidget {
+  final UserWithLocation user;
+  final List<String> wantedCards; // cartes que l'autre a en doublon
+  final List<String> offerableCards; // cartes que nous pouvons offrir
+  final CollectionService collectionService;
+  final String? extensionId; // pour images
+  const _BulkTradesDialog({
+    required this.user,
+    required this.wantedCards,
+    required this.offerableCards,
+    required this.collectionService,
+    this.extensionId,
+  });
+
+  @override
+  State<_BulkTradesDialog> createState() => _BulkTradesDialogState();
+}
+
+class _BulkTradesDialogState extends State<_BulkTradesDialog> {
+  late Map<String, String?> _selectedOffers; // wanted -> offered
+  bool _creating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedOffers = { for (final w in widget.wantedCards) w : widget.offerableCards.isNotEmpty ? widget.offerableCards.first : null };
+  }
+
+  void _applyOfferToAll(String offered) {
+    setState(() {
+      for (final k in _selectedOffers.keys) { _selectedOffers[k] = offered; }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Échanges avec ${widget.user.displayName ?? 'Utilisateur'}'),
+      content: SizedBox(
+        width: 600,
+        height: 500,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.offerableCards.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom:8.0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    const Text('Appliquer à tous:'),
+                    for (final c in widget.offerableCards.take(6)) // éviter overflow
+                      OutlinedButton(
+                        onPressed: () => _applyOfferToAll(c),
+                        child: Text(c.replaceAll('.png',''), overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: widget.wantedCards.length,
+                itemBuilder: (ctx, i) {
+                  final wanted = widget.wantedCards[i];
+                  final offered = _selectedOffers[wanted];
+                  final otherQty = widget.user.getCardQuantity(wanted);
+                  final myQty = widget.collectionService.getCardQuantity(wanted);
+                  return Card(
+                    margin: const EdgeInsets.only(bottom:8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.extensionId != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right:8.0, top:2),
+                              child: SizedBox(
+                                width: 48,
+                                height: 72,
+                                child: Image.asset(
+                                  AutoGameService.getCardImagePath(widget.extensionId!, wanted),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (c,_,__)=>(const Icon(Icons.image_not_supported,size:24,color: Colors.grey)),
+                                ),
+                              ),
+                            ),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(wanted.replaceAll('.png',''), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                const SizedBox(height:4),
+                                Row(children:[
+                                  _qtyBadge('Lui', otherQty, Colors.blue),
+                                  const SizedBox(width:6),
+                                  _qtyBadge('Moi', myQty, Colors.green),
+                                ])
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: offered,
+                              items: widget.offerableCards.map((c) => DropdownMenuItem(
+                                value: c,
+                                child: Row(
+                                  children: [
+                                    if (widget.extensionId != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right:6.0),
+                                        child: SizedBox(
+                                          width: 32,
+                                          height: 48,
+                                          child: Image.asset(
+                                            AutoGameService.getCardImagePath(widget.extensionId!, c),
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (c2,_,__)=>(const Icon(Icons.image_not_supported,size:16,color: Colors.grey)),
+                                          ),
+                                        ),
+                                      ),
+                                    Expanded(child: Text(c.replaceAll('.png',''), overflow: TextOverflow.ellipsis)),
+                                    const SizedBox(width:4),
+                                    _OwnedMiniBadge(cardName: c, collectionService: widget.collectionService),
+                                  ],
+                                ),
+                              )).toList(),
+                              onChanged: (v){ setState(()=> _selectedOffers[wanted] = v); },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _creating? null : () => Navigator.pop(context), child: const Text('Annuler')),
+        ElevatedButton.icon(
+          icon: _creating ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2,color: Colors.white)) : const Icon(Icons.send),
+          label: Text(_creating ? 'Création...' : 'Créer ${widget.wantedCards.length} échanges'),
+          onPressed: _creating ? null : () async {
+            setState(()=> _creating = true);
+            try {
+              final ready = <String,String>{};
+              _selectedOffers.forEach((wanted, offered) { if (offered != null) ready[wanted] = offered; });
+              if (ready.isEmpty) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucun échange sélectionné')));
+                return;
+              }
+              if (mounted) Navigator.pop(context, _BulkTradeResult(ready));
+            } finally {
+              if (mounted) setState(()=> _creating = false);
+            }
+          },
+        )
+      ],
+    );
+  }
+
+  Widget _qtyBadge(String label, int qty, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal:6,vertical:2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text('$label x$qty', style: TextStyle(fontSize:11,fontWeight: FontWeight.w600,color: _darker(color))),
+    );
+  }
+}
+
+Color _darker(Color base) {
+  final hsl = HSLColor.fromColor(base);
+  final darker = hsl.withLightness((hsl.lightness * 0.55).clamp(0.0, 1.0));
+  return darker.toColor();
+}
+
+class _OwnedMiniBadge extends StatelessWidget {
+  final String cardName;
+  final CollectionService collectionService;
+  const _OwnedMiniBadge({required this.cardName, required this.collectionService});
+  @override
+  Widget build(BuildContext context) {
+    final qty = collectionService.getCardQuantity(cardName);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal:4,vertical:2),
+      decoration: BoxDecoration(
+        color: qty>0? Colors.green.shade100 : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text('x$qty', style: TextStyle(fontSize:10,fontWeight: FontWeight.bold,color: qty>0? Colors.green.shade800: Colors.grey.shade600)),
     );
   }
 }
