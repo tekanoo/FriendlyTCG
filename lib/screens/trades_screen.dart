@@ -5,12 +5,13 @@ import '../services/game_service.dart';
 import '../services/auto_game_service.dart';
 import '../services/collection_service.dart';
 import '../models/user_with_location.dart';
-import '../models/user_model.dart';
+// Removed unused user_model import
 import '../models/extension_model.dart';
 import '../models/game_model.dart';
 import '../widgets/adaptive_card_grid.dart';
 import '../widgets/pagination_controls.dart';
-import 'trade_offer_screen.dart';
+// import 'trade_offer_screen.dart'; // removed unused direct navigation
+import '../services/trade_service_advanced.dart';
 import 'my_trades_screen.dart';
 
 class TradesScreen extends StatefulWidget {
@@ -741,10 +742,33 @@ class _TradesScreenState extends State<TradesScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            '${agg.cards.length} carte${agg.cards.length > 1 ? 's' : ''}',
+                            '${agg.cards.length} carte${agg.cards.length > 1 ? 's' : ''}', // length simple: braces already minimal
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Actions globales utilisateur
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            // Batch create trades for all remaining cards
+                            final offerable = await _getOfferableCardsForUser(user.uid);
+                            for (final wanted in agg.cards) {
+                              if (!mounted) break;
+                              final offered = offerable.isNotEmpty ? offerable.first : null;
+                              if (offered == null) break; // rien à offrir
+                              await _createSingleTrade(wanted, offered, user);
+                            }
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.all_inbox),
+                          label: const Text('Tout échanger'),
+                        ),
+                        const SizedBox(width: 12),
+                        Text('${agg.cards.length} carte(s) disponibles')
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -753,7 +777,7 @@ class _TradesScreenState extends State<TradesScreen> {
                       runSpacing: 8,
                       children: [
                         for (final cardName in agg.cards)
-                          _buildUserCardChip(user, cardName),
+                          _buildUserCardTradeChip(user, cardName),
                       ],
                     ),
                   ],
@@ -778,26 +802,59 @@ class _TradesScreenState extends State<TradesScreen> {
     );
   }
 
-  Widget _buildUserCardChip(UserWithLocation user, String cardName) {
+  Future<List<String>> _getOfferableCardsForUser(String otherUserId) async {
+    // Reuse logic from TradeServiceAdvanced (without duplicating). Quick fetch from Firestore minimal.
+    // For simplicity call existing service method.
+    return TradeServiceAdvanced().getCardsToOffer(otherUserId);
+  }
+
+  Future<void> _createSingleTrade(String wanted, String offered, UserWithLocation targetUser) async {
+    try {
+      final tradeId = await TradeServiceAdvanced().createTradeRequest(
+        toUserId: targetUser.uid,
+        toUserName: targetUser.displayName ?? targetUser.email,
+        wantedCard: wanted,
+        offeredCard: offered,
+      );
+      if (tradeId != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Échange créé pour ${wanted.replaceAll('.png', '')}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur création échange: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Widget _buildUserCardTradeChip(UserWithLocation user, String cardName) {
     final displayName = cardName.replaceAll('.png', '');
-    return ActionChip(
+    return InputChip(
       label: Text(displayName, overflow: TextOverflow.ellipsis),
-      avatar: const Icon(Icons.swap_horiz, size: 16),
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => TradeOfferScreen(
-              targetUser: UserModel(
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                cards: {},
-                lastSeen: DateTime.now(),
-              ),
-              wantedCard: cardName,
-            ),
+      avatar: const Icon(Icons.add, size: 16),
+      onPressed: () async {
+        final offerable = await _getOfferableCardsForUser(user.uid);
+        if (!mounted) return;
+        if (offerable.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aucune carte à offrir.')),);
+          return;
+        }
+        final created = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => _SingleTradeDialog(
+            wantedCard: cardName,
+            offerableCards: offerable,
+            onCreate: (wanted, offered) async {
+              await _createSingleTrade(wanted, offered, user);
+              return '';
+            },
           ),
         );
+        if (created == true) setState(() {});
       },
     );
   }
@@ -1044,4 +1101,101 @@ class _AggregatedUserCards {
   final UserWithLocation user;
   final List<String> cards = [];
   _AggregatedUserCards({required this.user});
+}
+/// Dialog pour créer un échange pour une carte spécifique avec choix de la carte offerte
+class _SingleTradeDialog extends StatefulWidget {
+  final String wantedCard;
+  final List<String> offerableCards; // cartes possédées non possédées par l'autre
+  final Future<String?> Function(String wanted, String offered) onCreate;
+
+  const _SingleTradeDialog({
+    required this.wantedCard,
+    required this.offerableCards,
+    required this.onCreate,
+  });
+
+  @override
+  State<_SingleTradeDialog> createState() => _SingleTradeDialogState();
+}
+
+class _SingleTradeDialogState extends State<_SingleTradeDialog> {
+  String? _selectedOffered;
+  bool _creating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Échange pour ${widget.wantedCard.replaceAll('.png', '')}'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Choisissez la carte que vous offrez:', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: widget.offerableCards.isEmpty
+                  ? const Center(child: Text('Aucune carte disponible à offrir'))
+                  : ListView.builder(
+                      itemCount: widget.offerableCards.length,
+                      itemBuilder: (context, index) {
+                        final card = widget.offerableCards[index];
+                        final display = card.replaceAll('.png', '');
+                        final selected = _selectedOffered == card;
+                        return ListTile(
+                          title: Text(display),
+                          leading: Radio<String>(
+                            value: card,
+                            groupValue: _selectedOffered,
+                            onChanged: (v) => setState(() => _selectedOffered = v),
+                          ),
+                          trailing: _CardOwnedQuantityBadge(cardName: card),
+                          onTap: () => setState(() => _selectedOffered = card),
+                          selected: selected,
+                        );
+                      },
+                    ),
+              ),
+            ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _creating? null : () => Navigator.pop(context), child: const Text('Annuler')),
+        ElevatedButton(
+          onPressed: (_selectedOffered == null || _creating) ? null : () async {
+            setState(() { _creating = true; });
+            try {
+              await widget.onCreate(widget.wantedCard, _selectedOffered!);
+              if (context.mounted) Navigator.pop(context, true);
+            } finally {
+              if (mounted) setState(() { _creating = false; });
+            }
+          },
+          child: _creating ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)) : const Text('Créer'),
+        )
+      ],
+    );
+  }
+}
+
+class _CardOwnedQuantityBadge extends StatelessWidget {
+  final String cardName;
+  const _CardOwnedQuantityBadge({required this.cardName});
+  @override
+  Widget build(BuildContext context) {
+    final collection = CollectionService();
+    final qty = collection.getCardQuantity(cardName);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal:8,vertical:4),
+      decoration: BoxDecoration(
+        color: qty>0? Colors.green.shade100 : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: qty>0? Colors.green : Colors.grey.shade400,width:1),
+      ),
+      child: Text('x$qty', style: TextStyle(fontSize:12,color: qty>0? Colors.green.shade800: Colors.grey.shade600,fontWeight: FontWeight.w600)),
+    );
+  }
 }

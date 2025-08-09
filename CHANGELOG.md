@@ -36,3 +36,8 @@
 
 ## 1.1.10+20
 - Échanges: bouton "Tout sélectionner" pour ajouter d'un coup toutes les cartes filtrées (toutes pages) + compteur (sélection / total filtré).
+
+## 1.1.11+21
+- Version dynamique sur l'écran principal (lecture package_info_plus).
+- Échanges agrégés: création d'échanges individuels par carte via un dialog de sélection d'une carte offerte (quantités affichées).
+- Ajout état visuel (chip validée) après création d'un échange + bouton "Tout échanger" (création séquentielle pour chaque carte restante).

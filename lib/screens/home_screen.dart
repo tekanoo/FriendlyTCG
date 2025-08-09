@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/collection_service.dart';
@@ -160,10 +161,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<String> _getAppVersion() async {
     try {
-      // Pour le web, on retourne la version depuis pubspec.yaml
-      return "1.1.0";
-    } catch (e) {
-      return "1.1.0";
+      final info = await PackageInfo.fromPlatform();
+      return '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      return 'unknown';
     }
   }
 }
