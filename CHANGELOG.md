@@ -33,3 +33,6 @@
 
 ## 1.1.9+19
 - Échanges: résultats de recherche agrégés par utilisateur (affiche chaque utilisateur une seule fois avec le nombre et la liste des cartes correspondantes).
+
+## 1.1.10+20
+- Échanges: bouton "Tout sélectionner" pour ajouter d'un coup toutes les cartes filtrées (toutes pages) + compteur (sélection / total filtré).

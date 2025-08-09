@@ -48,6 +48,15 @@ class _TradesScreenState extends State<TradesScreen> {
   // Filtre des cartes
   bool _showOnlyUnowned = false;
 
+  // Helper: total cartes filtrées (après filtre owned / tri non requis pour le count)
+  int get _totalFilteredCardsCount {
+    List<String> base = List.from(_availableCards);
+    if (!_sortAscending) {
+      base = base.reversed.toList();
+    }
+    return _getFilteredCards(base).length;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +149,15 @@ class _TradesScreenState extends State<TradesScreen> {
     setState(() {
       _selectedCards.clear();
       _searchResults.clear();
+    });
+  }
+
+  void _selectAllFiltered(List<String> filteredCards) {
+    setState(() {
+      _selectedCards
+        ..clear()
+        ..addAll(filteredCards);
+      _searchResults.clear(); // reset previous results si existants
     });
   }
 
@@ -569,7 +587,7 @@ class _TradesScreenState extends State<TradesScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Cartes sélectionnées (${_selectedCards.length})',
+                  'Cartes sélectionnées (${_selectedCards.length} / ${_totalFilteredCardsCount})',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.green.shade800,
@@ -836,15 +854,31 @@ class _TradesScreenState extends State<TradesScreen> {
                   const Text('Afficher uniquement les cartes non possédées'),
                 ],
               ),
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    _sortAscending = !_sortAscending;
-                    _currentPage = 0; // Reset pagination
-                  });
-                },
-                icon: Icon(_sortAscending ? Icons.sort_by_alpha : Icons.sort_by_alpha_outlined),
-                tooltip: _sortAscending ? 'Tri Z-A' : 'Tri A-Z',
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      // Utiliser toutes les cartes filtrées (sur toutes les pages)
+                      _selectAllFiltered(filteredCards);
+                    },
+                    icon: const Icon(Icons.select_all),
+                    label: Text(
+                      _selectedCards.length == filteredCards.length && filteredCards.isNotEmpty
+                          ? 'Toutes sélectionnées'
+                          : 'Tout sélectionner',
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _sortAscending = !_sortAscending;
+                        _currentPage = 0; // Reset pagination
+                      });
+                    },
+                    icon: Icon(_sortAscending ? Icons.sort_by_alpha : Icons.sort_by_alpha_outlined),
+                    tooltip: _sortAscending ? 'Tri Z-A' : 'Tri A-Z',
+                  ),
+                ],
               ),
             ],
           ),
