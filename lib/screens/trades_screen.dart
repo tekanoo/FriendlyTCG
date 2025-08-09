@@ -50,7 +50,6 @@ class _TradesScreenState extends State<TradesScreen> {
   
   // Filtre des cartes
   bool _showOnlyUnowned = false;
-  bool _showOnlyOwnedDuplicates = false; // afficher uniquement mes doublons lors de la sélection d'offres
 
   // Helper: total cartes filtrées (après filtre owned / tri non requis pour le count)
   int get _totalFilteredCardsCount {
@@ -826,7 +825,9 @@ class _TradesScreenState extends State<TradesScreen> {
   Future<List<String>> _getOfferableCardsForUser(String otherUserId) async {
     // Reuse logic from TradeServiceAdvanced (without duplicating). Quick fetch from Firestore minimal.
     // For simplicity call existing service method.
-    return TradeServiceAdvanced().getCardsToOffer(otherUserId);
+  final base = await TradeServiceAdvanced().getCardsToOffer(otherUserId);
+  // Garder uniquement mes doublons (quantité >1)
+  return base.where((c) => _collectionService.getCardQuantity(c) > 1).toList();
   }
 
   Future<void> _createSingleTrade(String wanted, String offered, UserWithLocation targetUser) async {
@@ -944,20 +945,6 @@ class _TradesScreenState extends State<TradesScreen> {
                     },
                   ),
                   const Text('Afficher uniquement les cartes non possédées'),
-                  const SizedBox(width: 16),
-                  Checkbox(
-                    value: _showOnlyOwnedDuplicates,
-                    onChanged: (value) {
-                      setState(() {
-                        _showOnlyOwnedDuplicates = value ?? false;
-                        if (_showOnlyOwnedDuplicates) {
-                          _showOnlyUnowned = false; // incompatibles logiquement
-                        }
-                        _currentPage = 0;
-                      });
-                    },
-                  ),
-                  const Text('Mes doublons (>1)'),
                 ],
               ),
               Row(
@@ -1129,22 +1116,12 @@ class _TradesScreenState extends State<TradesScreen> {
   }
 
   List<String> _getFilteredCards(List<String> sortedCards) {
-    List<String> working = sortedCards;
-    if (_showOnlyUnowned) {
-      final unowned = <String>[];
-      for (final card in working) {
-        if (_collectionService.getCardQuantity(card) == 0) unowned.add(card);
-      }
-      working = unowned;
+    if (!_showOnlyUnowned) return sortedCards;
+    final unowned = <String>[];
+    for (final card in sortedCards) {
+      if (_collectionService.getCardQuantity(card) == 0) unowned.add(card);
     }
-    if (_showOnlyOwnedDuplicates) {
-      final dups = <String>[];
-      for (final card in working) {
-        if (_collectionService.getCardQuantity(card) > 1) dups.add(card);
-      }
-      working = dups;
-    }
-    return working;
+    return unowned;
   }
 
 }
@@ -1236,7 +1213,7 @@ class _SingleTradeDialogState extends State<_SingleTradeDialog> {
                                     ),
                                   ),
                                 ),
-                              Expanded(child: Text(display)),
+                              Expanded(child: Text('$display  (x${CollectionService().getCardQuantity(card)})')),
                             ],
                           ),
                           trailing: _CardOwnedQuantityBadge(cardName: card),
@@ -1318,7 +1295,9 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedOffers = { for (final w in widget.wantedCards) w : widget.offerableCards.isNotEmpty ? widget.offerableCards.first : null };
+  // Filtrer une nouvelle fois par sécurité (uniquement doublons)
+  final duplicates = widget.offerableCards.where((c) => widget.collectionService.getCardQuantity(c) > 1).toList();
+  _selectedOffers = { for (final w in widget.wantedCards) w : duplicates.isNotEmpty ? duplicates.first : null };
   }
 
   void _applyOfferToAll(String offered) {
@@ -1401,7 +1380,9 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
                             child: DropdownButton<String>(
                               isExpanded: true,
                               value: offered,
-                              items: widget.offerableCards.map((c) => DropdownMenuItem(
+                items: widget.offerableCards
+                  .where((c) => widget.collectionService.getCardQuantity(c) > 1)
+                  .map((c) => DropdownMenuItem(
                                 value: c,
                                 child: Row(
                                   children: [
@@ -1418,7 +1399,7 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
                                           ),
                                         ),
                                       ),
-                                    Expanded(child: Text(c.replaceAll('.png',''), overflow: TextOverflow.ellipsis)),
+                                    Expanded(child: Text('${c.replaceAll('.png','')} (x${widget.collectionService.getCardQuantity(c)})', overflow: TextOverflow.ellipsis)),
                                     const SizedBox(width:4),
                                     _OwnedMiniBadge(cardName: c, collectionService: widget.collectionService),
                                   ],

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/user_profile_service.dart';
+import '../models/user_profile_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/collection_service.dart';
 import '../widgets/collection_overview_widget.dart';
 import 'games_screen.dart';
@@ -18,11 +21,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
   late TabController _tabController;
+  final UserProfileService _userProfileService = UserProfileService();
+  bool _profileChecked = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+  WidgetsBinding.instance.addPostFrameCallback((_) => _ensureProfileSetup());
   }
 
   @override
@@ -129,6 +135,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               const TradesMainScreen(),
             ],
           ),
+          // Bouton feedback / contact
+          Positioned(
+            bottom: 24,
+            left: 16,
+            child: _FeedbackButton(),
+          ),
           // Version en bas à droite
           Positioned(
             bottom: 16,
@@ -165,6 +177,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return '${info.version}+${info.buildNumber}';
     } catch (_) {
       return 'unknown';
+    }
+  }
+
+  Future<void> _ensureProfileSetup() async {
+    if (_profileChecked) return;
+    _profileChecked = true;
+    final user = _authService.currentUser;
+    if (user == null) return;
+    final profile = await _userProfileService.getCurrentUserProfile();
+    final needsSetup = profile == null ||
+        (profile.displayName == null || profile.displayName!.isEmpty || profile.displayName == user.displayName) ||
+        (profile.country == null && profile.region == null && profile.city == null);
+    if (needsSetup && mounted) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => _ProfileSetupDialog(initialEmail: user.email ?? ''),
+      );
     }
   }
 }
@@ -250,5 +280,246 @@ class _HomeTabState extends State<_HomeTab> {
         ),
       ],
     );
+  }
+}
+
+// Dialog de configuration initiale du profil (pseudo + localisation)
+class _ProfileSetupDialog extends StatefulWidget {
+  final String initialEmail;
+  const _ProfileSetupDialog({required this.initialEmail});
+
+  @override
+  State<_ProfileSetupDialog> createState() => _ProfileSetupDialogState();
+}
+
+class _ProfileSetupDialogState extends State<_ProfileSetupDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _displayNameController = TextEditingController();
+  final _countryController = TextEditingController();
+  final _regionController = TextEditingController();
+  final _cityController = TextEditingController();
+  bool _saving = false;
+  final _service = UserProfileService();
+
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    _countryController.dispose();
+    _regionController.dispose();
+    _cityController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Bienvenue !'),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Choisis un pseudo (visible publiquement) et ta localisation.'),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _displayNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Pseudo',
+                    prefixIcon: Icon(Icons.badge),
+                  ),
+                  maxLength: 24,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Pseudo requis';
+                    if (v.length < 3) return 'Minimum 3 caractères';
+                    return null;
+                  },
+                ),
+                Row(children:[
+                  Expanded(child: TextFormField(
+                    controller: _countryController,
+                    decoration: const InputDecoration(labelText: 'Pays'),
+                  )),
+                  const SizedBox(width:8),
+                  Expanded(child: TextFormField(
+                    controller: _regionController,
+                    decoration: const InputDecoration(labelText: 'Région'),
+                  )),
+                ]),
+                const SizedBox(height:8),
+                TextFormField(
+                  controller: _cityController,
+                  decoration: const InputDecoration(labelText: 'Ville (optionnel)'),
+                ),
+                const SizedBox(height:12),
+                Text(
+                  'Tu pourras modifier ces informations plus tard dans ton profil.',
+                  style: TextStyle(fontSize:12,color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Plus tard'),
+        ),
+        ElevatedButton.icon(
+          icon: _saving ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)) : const Icon(Icons.save),
+          label: Text(_saving ? 'Enregistrement...' : 'Enregistrer'),
+          onPressed: _saving ? null : _save,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(()=> _saving = true);
+    try {
+      final authUser = FirebaseAuth.instance.currentUser;
+      if (authUser == null) return;
+      final profile = UserProfileModel(
+        uid: authUser.uid,
+        email: authUser.email,
+        displayName: _displayNameController.text.trim(),
+        photoURL: authUser.photoURL,
+        country: _countryController.text.trim().isEmpty ? null : _countryController.text.trim(),
+        region: _regionController.text.trim().isEmpty ? null : _regionController.text.trim(),
+        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+        lastSeen: DateTime.now(),
+        lastUpdated: DateTime.now(),
+      );
+      await _service.updateUserProfile(profile);
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(()=> _saving = false);
+    }
+  }
+}
+
+// Bouton flottant / bulle de contact
+class _FeedbackButton extends StatefulWidget {
+  @override
+  State<_FeedbackButton> createState() => _FeedbackButtonState();
+}
+
+class _FeedbackButtonState extends State<_FeedbackButton> {
+  bool _open = false;
+  final _controller = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: _open ? 300 : 56,
+      height: _open ? 260 : 56,
+      decoration: BoxDecoration(
+        color: Colors.blue.shade600,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0,4)),
+        ],
+      ),
+      child: _open ? _buildForm(context) : _buildCollapsed(),
+    );
+  }
+
+  Widget _buildCollapsed() {
+    return InkWell(
+      onTap: ()=> setState(()=> _open = true),
+      borderRadius: BorderRadius.circular(28),
+      child: const Center(
+        child: Icon(Icons.chat, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Text('Nous contacter', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: _sending ? null : () => setState(()=> _open=false),
+              )
+            ],
+          ),
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              maxLines: null,
+              expands: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'Vos idées, suggestions...'
+                    '\n(Aucune donnée sensible SVP)',
+                hintStyle: TextStyle(color: Colors.white70),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue.shade700),
+                  icon: _sending ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)) : const Icon(Icons.send),
+                  label: Text(_sending ? 'Envoi...' : 'Envoyer'),
+                  onPressed: _sending ? null : _send,
+                ),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    setState(()=> _sending = true);
+    try {
+      // Simple mailto fallback (remplacer par Cloud Function / Firestore si besoin)
+      final uri = Uri(
+        scheme: 'mailto',
+        path: 'friendlytcg0@gmail.com', // TODO: remplacer par l'adresse réelle
+        queryParameters: {
+          'subject': 'Feedback FriendlyTCG',
+          'body': text,
+        },
+      );
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ouverture client mail...')));
+        setState(()=> _open=false);
+        _controller.clear();
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Échec envoi')));
+    } finally {
+      if (mounted) setState(()=> _sending = false);
+    }
   }
 }
