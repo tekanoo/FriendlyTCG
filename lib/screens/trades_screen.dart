@@ -657,128 +657,90 @@ class _TradesScreenState extends State<TradesScreen> {
   }
 
   Widget _buildSearchResults() {
+    // Agrégation par utilisateur : uid -> (UserWithLocation, liste cartes)
+    final Map<String, _AggregatedUserCards> aggregated = {};
+    _searchResults.forEach((cardName, users) {
+      for (final user in users) {
+        aggregated.putIfAbsent(user.uid, () => _AggregatedUserCards(user: user));
+        aggregated[user.uid]!.cards.add(cardName);
+      }
+    });
+
+    final entries = aggregated.values.toList()
+      ..sort((a, b) => b.cards.length.compareTo(a.cards.length));
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ..._searchResults.entries.map((entry) {
-            final cardName = entry.key;
-            return StreamBuilder<int>(
-              stream: _collectionService.getCardQuantityStream(cardName),
-              builder: (context, snapshot) {
-                final quantity = snapshot.data ?? 0;
-                final displayName = cardName.replaceAll('.png', '');
-                
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          if (entries.isEmpty)
+            const Text('Aucun utilisateur trouvé pour les cartes sélectionnées.')
+          else
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Utilisateurs trouvés: ${entries.length} (triés par nombre de cartes correspondantes)',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ...entries.map((agg) {
+            final user = agg.user;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                displayName,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (quantity > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Possédée ($quantity)',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        CircleAvatar(
+                          backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+                          child: user.photoURL == null ? Text(user.displayName?[0] ?? '?') : null,
                         ),
-                        const SizedBox(height: 12),
-                        if (entry.value.isEmpty)
-                          const Text('Aucun utilisateur trouvé pour cette carte.')
-                        else
-                          ...entry.value.map((user) {
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.shade200),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.displayName ?? 'Utilisateur anonyme',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundImage: user.photoURL != null
-                                        ? NetworkImage(user.photoURL!)
-                                        : null,
-                                    child: user.photoURL == null
-                                        ? Text(user.displayName?[0] ?? '?')
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          user.displayName ?? 'Utilisateur anonyme',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        if (user.region != null)
-                                          Text(
-                                            '📍 ${user.region}',
-                                            style: TextStyle(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => TradeOfferScreen(
-                                            targetUser: UserModel(
-                                              uid: user.uid,
-                                              email: user.email,
-                                              displayName: user.displayName,
-                                              cards: {},
-                                              lastSeen: DateTime.now(),
-                                            ),
-                                            wantedCard: cardName,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text('Échanger'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
+                              if (user.region != null)
+                                Text(
+                                  '📍 ${user.region}',
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade600,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${agg.cards.length} carte${agg.cards.length > 1 ? 's' : ''}',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                );
-              },
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final cardName in agg.cards)
+                          _buildUserCardChip(user, cardName),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             );
           }),
           if (_searchResults.isNotEmpty)
@@ -797,6 +759,31 @@ class _TradesScreenState extends State<TradesScreen> {
       ),
     );
   }
+
+  Widget _buildUserCardChip(UserWithLocation user, String cardName) {
+    final displayName = cardName.replaceAll('.png', '');
+    return ActionChip(
+      label: Text(displayName, overflow: TextOverflow.ellipsis),
+      avatar: const Icon(Icons.swap_horiz, size: 16),
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TradeOfferScreen(
+              targetUser: UserModel(
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                cards: {},
+                lastSeen: DateTime.now(),
+              ),
+              wantedCard: cardName,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   Widget _buildCardGrid() {
     // Utiliser l'ordre alphabétique du fichier généré directement
@@ -1015,4 +1002,12 @@ class _TradesScreenState extends State<TradesScreen> {
     }
     return filteredCards;
   }
+
+}
+
+// Helper aggregation structure (not nullable fields)
+class _AggregatedUserCards {
+  final UserWithLocation user;
+  final List<String> cards = [];
+  _AggregatedUserCards({required this.user});
 }

@@ -30,3 +30,6 @@
 
 ## 1.1.8+18
 - Correction: le bouton de tri (A-Z / Z-A) n'inversait pas l'ordre sans recherche dans `extension_gallery_screen.dart`.
+
+## 1.1.9+19
+- Échanges: résultats de recherche agrégés par utilisateur (affiche chaque utilisateur une seule fois avec le nombre et la liste des cartes correspondantes).
