@@ -590,7 +590,7 @@ class _TradesScreenState extends State<TradesScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Cartes sélectionnées (${_selectedCards.length} / ${_totalFilteredCardsCount})',
+                  'Cartes sélectionnées (${_selectedCards.length} / $_totalFilteredCardsCount)',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.green.shade800,
@@ -1433,7 +1433,7 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
                                               ),
                                             ),
                                           ),
-                                        Expanded(child: Text('${c.replaceAll('.png','')} (dup ${cap - used}/${cap})', overflow: TextOverflow.ellipsis)),
+                                        Expanded(child: Text('${c.replaceAll('.png','')} (dup ${cap - used}/$cap)', overflow: TextOverflow.ellipsis)),
                                       ],
                                     ),
                                   ),

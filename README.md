@@ -4,8 +4,8 @@
 
 Application Flutter (Web-first) de gestion de collection et d'échanges de cartes TCG multi-jeux.
 
-**Version actuelle : 1.1.13+23**  
-Consommation contrôlée des doublons (échanges bulk) + feedback Firestore.
+**Version actuelle : 1.1.14+24**  
+Onboarding première connexion (dialogue unique) + listes déroulantes pays/région, échanges bulk doublons, feedback Firestore.
 
 </div>
 

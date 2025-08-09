@@ -187,10 +187,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final user = _authService.currentUser;
     if (user == null) return;
     final profile = await _userProfileService.getCurrentUserProfile();
-    final needsSetup = profile == null ||
-        (profile.displayName == null || profile.displayName!.isEmpty || profile.displayName == user.displayName) ||
-        (profile.country == null && profile.region == null && profile.city == null);
-    if (needsSetup && mounted) {
+  // N'afficher le dialogue QUE si aucun profil n'existe encore (première connexion réelle)
+  final isFirstConnection = profile == null;
+  if (isFirstConnection && mounted) {
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -302,6 +301,25 @@ class _ProfileSetupDialogState extends State<_ProfileSetupDialog> {
   bool _saving = false;
   final _service = UserProfileService();
 
+  // Listes déroulantes simples (peuvent être déplacées dans un service partagé avec l'écran profil)
+  final List<String> _countries = const [
+    'France','Belgique','Suisse','Canada','Luxembourg','Autre'
+  ];
+  final Map<String,List<String>> _regionsByCountry = const {
+    'France': [
+      'Auvergne-Rhône-Alpes','Bourgogne-Franche-Comté','Bretagne','Centre-Val de Loire','Corse','Grand Est','Hauts-de-France','Île-de-France','Normandie','Nouvelle-Aquitaine','Occitanie','Pays de la Loire','Provence-Alpes-Côte d\'Azur','Guadeloupe','Martinique','Guyane','La Réunion','Mayotte'
+    ],
+    'Belgique': ['Bruxelles','Flandre','Wallonie'],
+    'Suisse': ['Zurich','Berne','Vaud','Genève','Argovie','Saint-Gall','Lucerne','Tessin','Valais','Fribourg'],
+    'Canada': ['Québec','Ontario','Colombie-Britannique','Alberta','Manitoba','Nouveau-Brunswick','Nouvelle-Écosse','Saskatchewan','Terre-Neuve-et-Labrador'],
+    'Luxembourg': ['Luxembourg'],
+  };
+
+  List<String> get _currentRegions {
+    final c = _countryController.text.trim();
+    return _regionsByCountry[c] ?? const [];
+  }
+
   @override
   void dispose() {
     _displayNameController.dispose();
@@ -340,15 +358,32 @@ class _ProfileSetupDialogState extends State<_ProfileSetupDialog> {
                   },
                 ),
                 Row(children:[
-                  Expanded(child: TextFormField(
-                    controller: _countryController,
-                    decoration: const InputDecoration(labelText: 'Pays'),
-                  )),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Pays'),
+                      value: _countries.contains(_countryController.text) ? _countryController.text : null,
+                      items: _countries.map((c)=> DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      onChanged: (val){
+                        setState(() {
+                          _countryController.text = val ?? '';
+                          if (!_currentRegions.contains(_regionController.text)) {
+                            _regionController.clear();
+                          }
+                        });
+                      },
+                      validator: (v){ if (v==null || v.isEmpty) return 'Sélectionner un pays'; return null; },
+                    ),
+                  ),
                   const SizedBox(width:8),
-                  Expanded(child: TextFormField(
-                    controller: _regionController,
-                    decoration: const InputDecoration(labelText: 'Région'),
-                  )),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Région'),
+                      value: _currentRegions.contains(_regionController.text) ? _regionController.text : null,
+                      items: _currentRegions.map((r)=> DropdownMenuItem(value: r, child: Text(r, overflow: TextOverflow.ellipsis))).toList(),
+                      onChanged: (val){ setState(()=> _regionController.text = val ?? ''); },
+                      validator: (v){ if (_currentRegions.isNotEmpty && (v==null || v.isEmpty)) return 'Sélectionner une région'; return null; },
+                    ),
+                  ),
                 ]),
                 const SizedBox(height:8),
                 TextFormField(

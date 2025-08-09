@@ -53,3 +53,9 @@
 - Feedback: remplacement du mailto par envoi direct Firestore (`FeedbackService`) avec métadonnées (uid, email, displayName, plateforme, timestamp).
 - Nettoyage: suppression composant `_OwnedMiniBadge` redondant.
 - Bump version `pubspec.yaml` → 1.1.13+23.
+
+## 1.1.14+24
+- Onboarding: dialogue de bienvenue affiché uniquement à la toute première connexion (profil inexistant).
+- Onboarding: listes déroulantes Pays / Région avec filtrage dynamique (aligné futur écran profil).
+- Lint: corrections interpolations inutiles dans `trades_screen.dart`.
+- Bump version `pubspec.yaml` → 1.1.14+24.
