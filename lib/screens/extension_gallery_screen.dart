@@ -159,30 +159,25 @@ class _ExtensionGalleryScreenState extends State<ExtensionGalleryScreen> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final aspectRatio = CardAspectRatioCalculator.calculate(context);
-                
+                // Responsive grid via AdaptiveCardGrid
                 return Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200),
-                    child: GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: aspectRatio,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: currentPageCards.length,
-                      itemBuilder: (context, index) {
-                        final card = currentPageCards[index];
-                        return _CardTile(
-                          card: card,
-                          onTap: () {
-                            _showCardModal(context, card, filteredCards, 
-                                filteredCards.indexOf(card));
-                          },
-                        );
-                      },
+                    child: AdaptiveCardGrid(
+                      children: [
+                        for (final card in currentPageCards)
+                          _CardTile(
+                            card: card,
+                            onTap: () {
+                              _showCardModal(
+                                context,
+                                card,
+                                filteredCards,
+                                filteredCards.indexOf(card),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ),
                 );

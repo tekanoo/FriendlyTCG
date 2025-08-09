@@ -214,7 +214,7 @@ class _TradesScreenState extends State<TradesScreen> {
                     value: _selectedRegionFilter,
                     items: [
                       const DropdownMenuItem<String>(value: null, child: Text('Toutes')), // non valide directement, géré autrement
-                      ...FrenchRegions.regions.map((r) => DropdownMenuItem<String>(value: r, child: Text(r))).toList(),
+                      ...FrenchRegions.regions.map((r) => DropdownMenuItem<String>(value: r, child: Text(r))),
                     ],
                     onChanged: (val) {
                       setState(() {
@@ -346,18 +346,10 @@ class _TradesScreenState extends State<TradesScreen> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.2,
-              ),
-              itemCount: games.length,
-              itemBuilder: (context, index) {
-                final game = games[index];
-                return _buildGameCard(game);
-              },
+            child: AdaptiveCardGrid(
+              children: [
+                for (final game in games) _buildGameCard(game),
+              ],
             ),
           ),
         ],
@@ -875,24 +867,15 @@ class _TradesScreenState extends State<TradesScreen> {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final aspectRatio = CardAspectRatioCalculator.calculate(context);
-              
+              // aspect ratio handled internally by AdaptiveCardGrid
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1200), // Même config que TCG
-                  child: GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, // 3x3 comme TCG
-                      childAspectRatio: aspectRatio,
-                      crossAxisSpacing: 12, // Même espacement que TCG
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: currentPageCards.length,
-                    itemBuilder: (context, index) {
-                      final cardImageName = currentPageCards[index];
-                      return _buildTCGStyleCardTile(cardImageName); // Nouveau style TCG
-                    },
+                  child: AdaptiveCardGrid(
+                    children: [
+                      for (final cardImageName in currentPageCards)
+                        _buildTCGStyleCardTile(cardImageName),
+                    ],
                   ),
                 ),
               );

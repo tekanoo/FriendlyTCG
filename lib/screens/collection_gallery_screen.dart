@@ -164,33 +164,28 @@ class _CollectionGalleryScreenState extends State<CollectionGalleryScreen> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final aspectRatio = CardAspectRatioCalculator.calculate(context);
+                // aspectRatio handled internally by AdaptiveCardGrid
                 
                 return Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200), // Même config que TCG
-                    child: GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3, // 3x3 grille
-                        childAspectRatio: aspectRatio, // Même ratio que TCG et Échanges
-                        crossAxisSpacing: 12, // Même espacement que TCG
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: currentPageCards.length,
-                      itemBuilder: (context, index) {
-                        final card = currentPageCards[index];
-                        final isOwned = _collectionService.getCardQuantity(card.name) > 0;
-                        return _CollectionCardTile(
-                          card: card,
-                          isOwned: isOwned,
-                          quantity: _collectionService.getCardQuantity(card.name),
-                          onTap: () {
-                            _showCardModal(context, card, filteredCards, 
-                                filteredCards.indexOf(card));
-                          },
-                        );
-                      },
+                    child: AdaptiveCardGrid(
+                      children: [
+                        for (final card in currentPageCards)
+                          _CollectionCardTile(
+                            card: card,
+                            isOwned: _collectionService.getCardQuantity(card.name) > 0,
+                            quantity: _collectionService.getCardQuantity(card.name),
+                            onTap: () {
+                              _showCardModal(
+                                context,
+                                card,
+                                filteredCards,
+                                filteredCards.indexOf(card),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ),
                 );

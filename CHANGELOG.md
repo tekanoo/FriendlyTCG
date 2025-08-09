@@ -18,3 +18,12 @@
 - Échanges: suppression de l'affichage de la ville, affichage uniquement de la région.
 - Ajout fichier `french_regions.dart` (13 régions métropolitaines) et filtre Région dans `TradesScreen` (étape cartes).
 - Dépréciation implicite du champ `city` dans `locationDisplay` (non affiché).
+
+## 1.1.7+17
+- Extension des régions à 18 (ajout DROM) dans `french_regions.dart`.
+- Refactor responsive: remplacement des `GridView.builder` fixes par `AdaptiveCardGrid` dans:
+	- `collection_gallery_screen.dart`
+	- `extension_gallery_screen.dart`
+	- `trades_screen.dart` (sélection jeu + cartes)
+	- `screen_size_test_screen.dart`
+- Suppression des calculs locaux d'aspect ratio redondants (géré dans `AdaptiveCardGrid`).

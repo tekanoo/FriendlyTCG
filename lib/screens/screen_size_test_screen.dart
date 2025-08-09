@@ -12,7 +12,7 @@ class _ScreenSizeTestScreenState extends State<ScreenSizeTestScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final aspectRatio = CardAspectRatioCalculator.calculate(context);
+  // aspectRatio now handled internally by AdaptiveCardGrid
     
     return Scaffold(
       appBar: AppBar(
@@ -42,7 +42,7 @@ class _ScreenSizeTestScreenState extends State<ScreenSizeTestScreen> {
                 const SizedBox(height: 8),
                 Text('Largeur: ${screenSize.width.toInt()}px'),
                 Text('Hauteur: ${screenSize.height.toInt()}px'),
-                Text('Ratio calculé: ${aspectRatio.toStringAsFixed(2)}'),
+                // Ratio calculé supprimé: géré automatiquement par AdaptiveCardGrid
                 Text('Orientation: ${screenSize.width > screenSize.height ? "Paysage" : "Portrait"}'),
               ],
             ),
@@ -55,18 +55,10 @@ class _ScreenSizeTestScreenState extends State<ScreenSizeTestScreen> {
                 return Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200),
-                    child: GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: aspectRatio,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: 9, // 3x3 grille
-                      itemBuilder: (context, index) {
-                        return _TestCard(index: index + 1);
-                      },
+                    child: AdaptiveCardGrid(
+                      children: [
+                        for (int i = 0; i < 9; i++) _TestCard(index: i + 1),
+                      ],
                     ),
                   ),
                 );
