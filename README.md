@@ -4,8 +4,8 @@
 
 Application Flutter (Web-first) de gestion de collection et d'échanges de cartes TCG multi-jeux.
 
-**Version actuelle : 1.1.4+14**  
-Masquage conditionnel de Pokémon + mode Analytics minimal.
+**Version actuelle : 1.1.13+23**  
+Consommation contrôlée des doublons (échanges bulk) + feedback Firestore.
 
 </div>
 
@@ -17,8 +17,8 @@ Masquage conditionnel de Pokémon + mode Analytics minimal.
 - 🖼️ Affichage des logos / images cartes avec fallback et vérification par tests
 - 📁 Navigation par Jeux → Extensions → Cartes (grilles paginées 3x3, recherche, tri A/Z)
 - 📦 Gestion de collection (cartes possédées vs non possédées, quantité)
-- 🔄 Système d'échanges (création de demandes, sélection de cartes disponibles)
-- 📊 Mode Analytics configurable (minimal: seulement utilisateurs uniques + pages vues)
+- 🔄 Système d'échanges avancé (agrégation par utilisateur, échanges bulk, limitation consommation de doublons)
+ - 📊 Mode Analytics configurable (minimal: login + écrans) avec déduplication optionnelle
 - 🧪 Suite de tests d'intégrité des assets & cohérence (logos, variantes, structure)
 - 🏷️ Feature flags activables sans retirer le code (ex: masquage Pokémon)
 - 🚀 Scripts de déploiement (Web) simplifiés
@@ -74,9 +74,12 @@ Filtrage Pokémon appliqué dans `GameService.availableGames` et `getExtensionsF
 
 ## 🔄 Échanges (Trades)
 
-- Sélection d'une carte à proposer parmi celles que l'autre utilisateur ne possède pas.
-- Création d'une requête d'échange (`TradeServiceAdvanced`).
-- Navigation ensuite vers un chat d'échange (`trade_chat_screen.dart`).
+- Recherche utilisateurs possédant vos cartes manquantes (option doublons uniquement)
+- Agrégation par utilisateur avec compteur de correspondances
+- Sélection simple ou création en lot (bulk) avec attribution d'un doublon différent si capacité épuisée
+- Contrôle de capacité: une copie excédentaire (qty-1) ne peut être réutilisée dans la même opération
+- Dialogs avec images + quantités (vous / autre)
+- Historique / statut sur chip après création
 
 ---
 
@@ -175,8 +178,8 @@ Branche dédiée + PR + tests OK + mise à jour changelog si nécessaire.
 
 ---
 
-## 📬 Support
-Vérifier logs (mode debug), tests assets, puis ajuster `feature_flags.dart`.
+## 📬 Support & Feedback
+Utilisez la bulle flottante (coin inférieur gauche) pour envoyer un feedback directement (stocké dans Firestore). Pas d'email externe requis.
 
 ---
 

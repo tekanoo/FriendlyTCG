@@ -47,3 +47,9 @@
 - Échanges: filtre optionnel "Mes doublons (>1)" lors de la sélection des cartes (affiche uniquement les cartes que l'on possède en plusieurs exemplaires avant recherche).
 - Dashboard Collection: Progression basée sur cartes uniques; affichage séparé Copies / Uniques / Doublons globalement, par jeu et par extension.
 - Modèles stats mis à jour (ownedUnique vs owned copies) sans impact sur API externe.
+
+## 1.1.13+23
+- Échanges (bulk): consommation contrôlée des doublons (chaque copie excédentaire ne peut être utilisée qu'une seule fois dans un lot) avec affichage des capacités restantes.
+- Feedback: remplacement du mailto par envoi direct Firestore (`FeedbackService`) avec métadonnées (uid, email, displayName, plateforme, timestamp).
+- Nettoyage: suppression composant `_OwnedMiniBadge` redondant.
+- Bump version `pubspec.yaml` → 1.1.13+23.

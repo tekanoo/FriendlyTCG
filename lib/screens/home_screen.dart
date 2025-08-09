@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
 import '../models/user_profile_model.dart';
-import 'package:url_launcher/url_launcher.dart';
+// url_launcher n'est plus requis ici après migration feedback Firestore
+import '../services/feedback_service.dart';
 import '../services/collection_service.dart';
 import '../widgets/collection_overview_widget.dart';
 import 'games_screen.dart';
@@ -413,6 +414,7 @@ class _FeedbackButtonState extends State<_FeedbackButton> {
   bool _open = false;
   final _controller = TextEditingController();
   bool _sending = false;
+  final _feedbackService = FeedbackService();
 
   @override
   void dispose() {
@@ -499,25 +501,14 @@ class _FeedbackButtonState extends State<_FeedbackButton> {
     if (text.isEmpty) return;
     setState(()=> _sending = true);
     try {
-      // Simple mailto fallback (remplacer par Cloud Function / Firestore si besoin)
-      final uri = Uri(
-        scheme: 'mailto',
-        path: 'friendlytcg0@gmail.com', // TODO: remplacer par l'adresse réelle
-        queryParameters: {
-          'subject': 'Feedback FriendlyTCG',
-          'body': text,
-        },
-      );
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
+      await _feedbackService.sendFeedback(text);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ouverture client mail...')));
-        setState(()=> _open=false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback envoyé. Merci !')));
+        setState(()=> _open = false);
         _controller.clear();
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Échec envoi')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur lors de l\'envoi')));
     } finally {
       if (mounted) setState(()=> _sending = false);
     }

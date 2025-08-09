@@ -97,44 +97,44 @@ class _TradesScreenState extends State<TradesScreen> {
           _selectedExtension = null;
           _availableCards = [];
           _selectedCards.clear();
+          _searchResults.clear();
         } else if (_currentStep == 1) {
           _selectedExtension = null;
           _availableCards = [];
           _selectedCards.clear();
+          _searchResults.clear();
         }
       }
     });
   }
 
   Future<void> _searchForCardOwners() async {
-    if (_selectedCards.isEmpty) return;
-
-    setState(() {
-      _isSearching = true;
-    });
-
+    if (_selectedCards.isEmpty || _selectedExtension == null) return;
+    setState(() { _isSearching = true; _searchResults.clear(); });
     try {
-  final results = await _tradeService.findUsersWithCardsAndLocation(_selectedCards, onlyDuplicates: true);
-      // Appliquer filtre région si défini (uniquement 13 régions métropole)
-      if (_selectedRegionFilter != null) {
-        results.updateAll((card, users) => users.where((u) => (u.region ?? '') == _selectedRegionFilter).toList());
-      }
-      setState(() {
-        _searchResults = results;
+      final results = await _tradeService.findUsersWithCardsAndLocation(
+        _selectedCards,
+        onlyDuplicates: true,
+      );
+      // results: Map<String,List<UserWithLocation>>
+      final filtered = <String,List<UserWithLocation>>{};
+      results.forEach((card, users) {
+        final list = _selectedRegionFilter == null
+            ? users
+            : users.where((u) => (u.region ?? '') == _selectedRegionFilter).toList();
+        if (list.isNotEmpty) filtered[card] = list;
       });
+      if (mounted) {
+        setState(() { _searchResults = filtered; });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la recherche: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Erreur lors de la recherche: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isSearching = false;
-      });
+      if (mounted) setState(() { _isSearching = false; });
     }
   }
 
@@ -1291,13 +1291,36 @@ class _BulkTradesDialog extends StatefulWidget {
 class _BulkTradesDialogState extends State<_BulkTradesDialog> {
   late Map<String, String?> _selectedOffers; // wanted -> offered
   bool _creating = false;
+  late Map<String,int> _duplicateCapacities; // offeredCard -> available duplicate count (qty-1)
+  Map<String,int> _usage = {}; // offeredCard -> used count in current selections
 
   @override
   void initState() {
     super.initState();
   // Filtrer une nouvelle fois par sécurité (uniquement doublons)
   final duplicates = widget.offerableCards.where((c) => widget.collectionService.getCardQuantity(c) > 1).toList();
-  _selectedOffers = { for (final w in widget.wantedCards) w : duplicates.isNotEmpty ? duplicates.first : null };
+  _duplicateCapacities = {
+    for (final c in duplicates)
+      c : (widget.collectionService.getCardQuantity(c) - 1).clamp(0, 9999),
+  };
+  _usage = { for (final c in duplicates) c: 0 };
+  _selectedOffers = { for (final w in widget.wantedCards) w : null };
+  // Initial round-robin assignment respecting capacities
+  int di = 0;
+  final ordered = duplicates.toList();
+  for (final wanted in widget.wantedCards) {
+    int attempts = 0;
+    while (ordered.isNotEmpty && attempts < ordered.length) {
+      final cand = ordered[di % ordered.length];
+      if (_usage[cand]! < _duplicateCapacities[cand]!) {
+        _selectedOffers[wanted] = cand;
+        _usage[cand] = _usage[cand]! + 1;
+        di++;
+        break;
+      }
+      di++; attempts++;
+    }
+  }
   }
 
   void _applyOfferToAll(String offered) {
@@ -1316,7 +1339,7 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.offerableCards.length > 1)
+            if (_duplicateCapacities.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom:8.0),
                 child: Wrap(
@@ -1324,13 +1347,18 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
                   runSpacing: 4,
                   children: [
                     const Text('Appliquer à tous:'),
-                    for (final c in widget.offerableCards.take(6)) // éviter overflow
+                    for (final c in _duplicateCapacities.keys.take(6)) // éviter overflow
                       OutlinedButton(
-                        onPressed: () => _applyOfferToAll(c),
-                        child: Text(c.replaceAll('.png',''), overflow: TextOverflow.ellipsis),
+                        onPressed: _duplicateCapacities[c]! - (_usage[c] ?? 0) > 0 ? () => _applyOfferToAll(c) : null,
+                        child: Text('${c.replaceAll('.png','')} (reste ${_duplicateCapacities[c]! - (_usage[c] ?? 0)})', overflow: TextOverflow.ellipsis),
                       ),
                   ],
                 ),
+              ),
+            if (_duplicateCapacities.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom:8.0),
+                child: Text('Aucun doublon disponible à offrir. Ajoutez des cartes en double d\'abord.', style: TextStyle(color: Colors.red)),
               ),
             Expanded(
               child: ListView.builder(
@@ -1380,32 +1408,48 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
                             child: DropdownButton<String>(
                               isExpanded: true,
                               value: offered,
-                items: widget.offerableCards
-                  .where((c) => widget.collectionService.getCardQuantity(c) > 1)
-                  .map((c) => DropdownMenuItem(
-                                value: c,
-                                child: Row(
-                                  children: [
-                                    if (widget.extensionId != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(right:6.0),
-                                        child: SizedBox(
-                                          width: 32,
-                                          height: 48,
-                                          child: Image.asset(
-                                            AutoGameService.getCardImagePath(widget.extensionId!, c),
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (c2,_,__)=>(const Icon(Icons.image_not_supported,size:16,color: Colors.grey)),
+                              items: _duplicateCapacities.keys.map((c) {
+                                final cap = _duplicateCapacities[c]!;
+                                final used = _usage[c] ?? 0;
+                                final remaining = cap - used + (offered == c ? 1 : 0); // if currently selected, allow staying even if capacity full
+                                final disabled = remaining <= 0;
+                                return DropdownMenuItem<String>(
+                                  value: disabled ? null : c,
+                                  enabled: !disabled || offered == c,
+                                  child: Opacity(
+                                    opacity: disabled && offered != c ? 0.4 : 1.0,
+                                    child: Row(
+                                      children: [
+                                        if (widget.extensionId != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(right:6.0),
+                                            child: SizedBox(
+                                              width: 32,
+                                              height: 48,
+                                              child: Image.asset(
+                                                AutoGameService.getCardImagePath(widget.extensionId!, c),
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (c2,_,__)=>(const Icon(Icons.image_not_supported,size:16,color: Colors.grey)),
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                    Expanded(child: Text('${c.replaceAll('.png','')} (x${widget.collectionService.getCardQuantity(c)})', overflow: TextOverflow.ellipsis)),
-                                    const SizedBox(width:4),
-                                    _OwnedMiniBadge(cardName: c, collectionService: widget.collectionService),
-                                  ],
-                                ),
-                              )).toList(),
-                              onChanged: (v){ setState(()=> _selectedOffers[wanted] = v); },
+                                        Expanded(child: Text('${c.replaceAll('.png','')} (dup ${cap - used}/${cap})', overflow: TextOverflow.ellipsis)),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (v){
+                                if (v == null) return; // disabled
+                                setState(() {
+                                  final prev = offered;
+                                  if (prev != null) {
+                                    _usage[prev] = (_usage[prev] ?? 1) - 1;
+                                  }
+                                  _selectedOffers[wanted] = v;
+                                  _usage[v] = (_usage[v] ?? 0) + 1;
+                                });
+                              },
                             ),
                           ),
                         ],
@@ -1428,6 +1472,12 @@ class _BulkTradesDialogState extends State<_BulkTradesDialog> {
             try {
               final ready = <String,String>{};
               _selectedOffers.forEach((wanted, offered) { if (offered != null) ready[wanted] = offered; });
+              // Validate capacities
+              final overUsed = _usage.entries.any((e) => e.value > (_duplicateCapacities[e.key] ?? 0));
+              if (overUsed) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Capacité de doublons dépassée. Ajustez vos sélections.')));
+                return;
+              }
               if (ready.isEmpty) {
                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucun échange sélectionné')));
                 return;
@@ -1461,20 +1511,4 @@ Color _darker(Color base) {
   return darker.toColor();
 }
 
-class _OwnedMiniBadge extends StatelessWidget {
-  final String cardName;
-  final CollectionService collectionService;
-  const _OwnedMiniBadge({required this.cardName, required this.collectionService});
-  @override
-  Widget build(BuildContext context) {
-    final qty = collectionService.getCardQuantity(cardName);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal:4,vertical:2),
-      decoration: BoxDecoration(
-        color: qty>0? Colors.green.shade100 : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text('x$qty', style: TextStyle(fontSize:10,fontWeight: FontWeight.bold,color: qty>0? Colors.green.shade800: Colors.grey.shade600)),
-    );
-  }
-}
+// _OwnedMiniBadge class removed after dropdown refactor
