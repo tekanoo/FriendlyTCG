@@ -66,21 +66,25 @@ class MarketplaceListing {
   }
 
   Map<String, dynamic> toFirestore() {
-    return {
+    final data = <String, dynamic>{
       'sellerId': sellerId,
       'sellerName': sellerName,
-      'sellerRegion': sellerRegion,
       'cardName': cardName,
       'priceCents': priceCents,
       'status': status.toString().split('.').last,
       'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
-      'soldAt': soldAt != null ? Timestamp.fromDate(soldAt!) : null,
-  'buyerId': buyerId,
-  'sellerValidated': sellerValidated,
-  'buyerValidated': buyerValidated,
-  'listingType': listingType.toString().split('.').last,
+      'sellerValidated': sellerValidated,
+      'buyerValidated': buyerValidated,
+      'listingType': listingType.toString().split('.').last,
     };
+    
+    // Ajouter seulement les champs non-null
+    if (sellerRegion != null) data['sellerRegion'] = sellerRegion;
+    if (updatedAt != null) data['updatedAt'] = Timestamp.fromDate(updatedAt!);
+    if (soldAt != null) data['soldAt'] = Timestamp.fromDate(soldAt!);
+    if (buyerId != null) data['buyerId'] = buyerId;
+    
+    return data;
   }
 
   MarketplaceListing copyWith({

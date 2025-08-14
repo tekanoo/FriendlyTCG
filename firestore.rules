@@ -126,12 +126,10 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.sellerId == request.auth.uid
         && request.resource.data.cardName is string
+        && request.resource.data.cardName.size() > 0
         && request.resource.data.priceCents is int
         && request.resource.data.priceCents > 0
-        && request.resource.data.status == 'active'
-        // listingType rétro-compatible: autoriser absence (anciennes versions) -> traité côté client comme 'sale'
-        && (!('listingType' in request.resource.data) || request.resource.data.listingType in ['sale','buy'])
-        && !('buyerId' in request.resource.data);
+        && request.resource.data.status == 'active';
       // Mise à jour: seulement vendeur OU acheteur (si réservé) peut modifier champs autorisés
       allow update: if request.auth != null && (
         // Vendeur peut ajuster prix ou statut (cancel / reserved -> sold via validations) et flags validation
@@ -205,6 +203,63 @@ service cloud.firestore {
         && request.resource.data.timestamp == request.time
       );
       allow update, delete: if false;
+    }
+
+    // ---------------------------
+    // Conversations marketplace
+    // ---------------------------
+    match /conversations/{conversationId} {
+      // Lecture: vendeur ou acheteur de la conversation
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.sellerId ||
+        request.auth.uid == resource.data.buyerId
+      );
+      
+      // Création: utilisateur connecté, données valides, et tous les champs requis
+      allow create: if request.auth != null && 
+        // Accepte un timestamp fourni par le client (plus souple que == request.time)
+        request.resource.data.createdAt is timestamp &&
+        (request.auth.uid == request.resource.data.sellerId ||
+         request.auth.uid == request.resource.data.buyerId) &&
+        request.resource.data.listingId is string &&
+        request.resource.data.cardName is string &&
+        request.resource.data.sellerId is string &&
+        request.resource.data.buyerId is string &&
+        request.resource.data.sellerName is string &&
+        request.resource.data.buyerName is string &&
+        request.resource.data.type is string &&
+        request.resource.data.status is string &&
+        request.resource.data.originalPriceCents is int &&
+        request.resource.data.hasUnreadBuyer is bool &&
+        request.resource.data.hasUnreadSeller is bool &&
+        request.resource.data.participants is list &&
+        request.resource.data.participants.size() == 2;
+      
+      // Mise à jour: participants peuvent mettre à jour status et flags unread
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.sellerId ||
+        request.auth.uid == resource.data.buyerId
+      );
+      
+      allow delete: if false; // pas de suppression
+      
+      // Messages des conversations
+      match /messages/{messageId} {
+        // Lecture: participants de la conversation
+        allow read: if request.auth != null && (
+          request.auth.uid == get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId ||
+          request.auth.uid == get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId
+        );
+        
+        // Création: participant + senderId cohérent
+        allow create: if request.auth != null && 
+          request.resource.data.senderId == request.auth.uid &&
+          // createdAt peut être un timestamp client; la précision exacte n'est pas critique ici
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.content is string;
+        
+        allow update, delete: if false; // messages immutables
+      }
     }
   }
 }

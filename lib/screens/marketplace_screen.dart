@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/marketplace_models.dart';
 import '../services/marketplace_service.dart';
+import '../services/conversation_service.dart';
+import '../widgets/conversation_bubble.dart';
 import 'dart:convert';
 
 class MarketplaceScreen extends StatefulWidget {
@@ -16,10 +18,11 @@ class MarketplaceScreen extends StatefulWidget {
 
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
   final _service = MarketplaceService();
+  final _conversationService = ConversationService();
   final _searchController = TextEditingController();
   RangeValues _priceRange = const RangeValues(0, 200); // euros
   String? _regionFilter;
-  bool _showOnlyAvailable = true;
+  bool _showOnlyAvailable = false; // Par défaut: montrer toutes les cartes
   // Nouveau: catalogue complet
   bool _catalogLoading = true;
   final List<String> _allCards = [];
@@ -80,11 +83,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             child: _catalogLoading ? const Center(child: CircularProgressIndicator()) : StreamBuilder<List<MarketplaceListing>>(
               stream: _service.listenActiveListings(),
               builder: (context, snapshot) {
+                debugPrint('🔍 StreamBuilder update: hasData=${snapshot.hasData}, data length=${snapshot.data?.length ?? 0}');
+                if (snapshot.hasData) {
+                  for (final listing in snapshot.data!) {
+                    debugPrint('📋 Listing: ${listing.cardName} - ${listing.priceCents/100}€ - ${listing.status} - ${listing.listingType}');
+                  }
+                }
                 final activeListings = snapshot.data ?? [];
                 // Regrouper par carte
                 final Map<String, List<MarketplaceListing>> byCard = {};
                 for (final l in activeListings) {
                   (byCard[l.cardName] ??= []).add(l);
+                }
+                debugPrint('🗂️ Regroupement: ${byCard.length} cartes avec listings');
+                for (final entry in byCard.entries) {
+                  debugPrint('   ${entry.key}: ${entry.value.length} listings');
                 }
                 // Construire entrées catalogue
                 final term = _searchController.text.trim().toLowerCase();
@@ -113,11 +126,20 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     filteredListings = filteredListings.where((l) => l.status == ListingStatus.active).toList();
                   }
                   if (_showOnlyAvailable && filteredListings.isEmpty) {
-                    // on masque si demandé seulement disponibles
+                    // on masque si demandé seulement disponibles ET aucune annonce active
                     continue;
                   }
                   final minPrice = filteredListings.where((l)=> l.listingType == ListingType.sale).map((l) => l.priceCents).fold<int?>(null, (prev, e) => prev==null? e : (e < prev ? e : prev)) ?? 0;
                   final bestBuy = filteredListings.where((l)=> l.listingType == ListingType.buy).map((l)=> l.priceCents).fold<int?>(null,(prev,e)=> prev==null? e : (e > prev ? e : prev)) ?? 0;
+                  
+                  if (card == 'GD01-001.png') { // Debug pour la carte testée
+                    debugPrint('🎯 Debug GD01-001.png:');
+                    debugPrint('   - filteredListings: ${filteredListings.length}');
+                    debugPrint('   - sales: ${filteredListings.where((l)=> l.listingType == ListingType.sale).length}');
+                    debugPrint('   - buys: ${filteredListings.where((l)=> l.listingType == ListingType.buy).length}');
+                    debugPrint('   - minPrice: $minPrice');
+                    debugPrint('   - bestBuy: $bestBuy');
+                  }
                   entries.add(_CardEntry(
                     cardName: card,
                     setName: _cardSet[card],
@@ -158,15 +180,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           )
         ],
       ),
-      Positioned(
-        bottom: 16,
-        right: 16,
-        child: FloatingActionButton.extended(
-          onPressed: _openCreateListing,
-          icon: const Icon(Icons.add),
-          label: const Text('Annonce'),
-        ),
-      )
+      // Bulle de conversations
+      const ConversationBubble(),
     ]);
   }
 
@@ -260,7 +275,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           _searchController.clear();
           _priceRange = const RangeValues(0, 200);
           _regionFilter = null;
-          _showOnlyAvailable = true;
+          _showOnlyAvailable = false;
           _setFilter = null;
           _gameFilter = null;
           _sortField = 'name';
@@ -299,20 +314,234 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _openCardEntry(_CardEntry entry) {
-    if (entry.listings.isEmpty) return; // rien à afficher
+    // Permettre l'ouverture même sans annonces pour voir l'historique
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.7,
-        builder: (c, scroll) => _CardListingsSheet(entry: entry, onOpenListing: _openListing, scrollController: scroll),
+        builder: (c, scroll) => _CardListingsSheet(
+          entry: entry, 
+          onOpenListing: _openListing, 
+          onCreateListing: () => _openCreateListing(),
+          scrollController: scroll,
+          onDeleteListing: _deleteListing,
+          onHandleListingTap: _handleListingTap,
+        ),
       ),
     );
   }
 
   void _openCreateListing() {
     showDialog(context: context, builder: (ctx)=> const _CreateListingDialog());
+  }
+
+  Future<void> _deleteListing(MarketplaceListing listing) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer l\'annonce'),
+        content: Text('Voulez-vous vraiment supprimer cette ${listing.listingType == ListingType.sale ? 'vente' : 'offre d\'achat'} ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _service.deleteListing(listing.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Annonce supprimée avec succès')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur lors de la suppression: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  void _handleListingTap(MarketplaceListing listing) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    
+    // Empêcher l'interaction avec ses propres listings
+    if (currentUserId == listing.sellerId) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vous ne pouvez pas interagir avec votre propre annonce')),
+        );
+      }
+      return;
+    }
+    
+    if (listing.listingType == ListingType.sale) {
+      // Pour une vente : proposer un prix
+      _showPriceOfferDialog(listing);
+    } else {
+      // Pour un achat : envoyer un message
+      _showMessageDialog(listing);
+    }
+  }
+
+  void _showPriceOfferDialog(MarketplaceListing listing) {
+    final priceController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Proposer un prix pour ${listing.cardName.replaceAll('.png', '')}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Prix demandé: ${(listing.priceCents / 100).toStringAsFixed(2)}€'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: priceController,
+              decoration: const InputDecoration(
+                labelText: 'Votre offre (€)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final priceText = priceController.text.trim();
+              if (priceText.isEmpty) return;
+              
+              final price = double.tryParse(priceText);
+              if (price == null || price <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Prix invalide')),
+                );
+                return;
+              }
+              
+              final priceCents = (price * 100).round();
+              final message = 'Je propose ${price.toStringAsFixed(2)}€ pour cette carte.';
+              
+              Navigator.of(context).pop();
+              
+              try {
+                final conversationId = await _conversationService.createPriceOfferConversation(
+                  listing: listing,
+                  proposedPriceCents: priceCents,
+                  initialMessage: message,
+                );
+                
+                if (conversationId != null && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Offre envoyée !')),
+                  );
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Erreur lors de l\'envoi')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Envoyer l\'offre'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessageDialog(MarketplaceListing listing) {
+    final messageController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Contacter ${listing.sellerName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Offre d\'achat: ${(listing.priceCents / 100).toStringAsFixed(2)}€'),
+            Text('Pour: ${listing.cardName.replaceAll('.png', '')}'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: messageController,
+              decoration: const InputDecoration(
+                labelText: 'Votre message',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final message = messageController.text.trim();
+              if (message.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Veuillez saisir un message')),
+                );
+                return;
+              }
+              
+              Navigator.of(context).pop();
+              
+              try {
+                final conversationId = await _conversationService.createBuyInquiryConversation(
+                  listing: listing,
+                  initialMessage: message,
+                );
+                
+                if (conversationId != null && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Message envoyé !')),
+                  );
+                } else if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Erreur lors de l\'envoi')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Envoyer'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -337,7 +566,7 @@ class _CatalogCard extends StatelessWidget {
     final activeSale = entry.listings.where((l)=> l.listingType==ListingType.sale && l.status==ListingStatus.active).length;
     final activeBuy = entry.listings.where((l)=> l.listingType==ListingType.buy && l.status==ListingStatus.active).length;
     return InkWell(
-      onTap: hasListings ? onTap : null,
+      onTap: onTap, // Permettre clic sur toutes les cartes
       child: Card(
         elevation: 1,
         child: Padding(
@@ -345,21 +574,80 @@ class _CatalogCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children:[
-              Expanded(child: Center(child: Text(entry.cardName.replaceAll('.png',''), textAlign: TextAlign.center, style: const TextStyle(fontSize:12)))),
+              // Image de la carte
+              Expanded(
+                flex: 3,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: _buildCardImage(entry.cardName),
+                  ),
+                ),
+              ),
               const SizedBox(height:6),
+              // Nom de la carte
+              Text(
+                entry.cardName.replaceAll('.png',''), 
+                textAlign: TextAlign.center, 
+                style: const TextStyle(fontSize:10),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height:4),
               Text(hasListings ? 'dès $price €' : '0 €', style: TextStyle(fontWeight: FontWeight.bold, color: hasListings ? Colors.black : Colors.grey.shade600)),
-        Text('Offre: $bestBuy €', style: const TextStyle(fontSize:10, color: Colors.black54)),
+              if (entry.bestBuyCents > 0) Text('Offre: $bestBuy €', style: const TextStyle(fontSize:10, color: Colors.black54)),
+              const SizedBox(height:2),
               Row(children:[
                 if (activeSale>0) _badge('${activeSale}V', Colors.green.shade600),
                 if (activeBuy>0) Padding(padding: const EdgeInsets.only(left:4), child: _badge('${activeBuy}R', Colors.indigo.shade500)),
               ]),
-              if (entry.setName!=null) Text(entry.setName!, style: const TextStyle(fontSize:10, color: Colors.grey)),
+              if (entry.setName!=null) Text(entry.setName!, style: const TextStyle(fontSize:8, color: Colors.grey)),
             ],
           ),
         ),
       ),
     );
   }
+  
+  Widget _buildCardImage(String fileName) {
+    // Heuristique simple: essayer chemins principaux connus; fallback icône
+    final baseNameVariantStripped = fileName.replaceAll(RegExp(r'_Variante_P\d+'), '');
+    final candidates = [
+      'assets/images/gundam_cards/newtype_risings/$fileName',
+      // fallback même dossier sans suffixe variante
+      if (baseNameVariantStripped != fileName)
+        'assets/images/gundam_cards/newtype_risings/$baseNameVariantStripped',
+      'assets/images/gundam_cards/edition_beta/$fileName',
+      if (baseNameVariantStripped != fileName)
+        'assets/images/gundam_cards/edition_beta/$baseNameVariantStripped',
+      'assets/images/Pokemon/prismatic-evolutions/$fileName',
+      if (baseNameVariantStripped != fileName)
+        'assets/images/Pokemon/prismatic-evolutions/$baseNameVariantStripped',
+    ];
+
+    Widget buildChain(int index) {
+      if (index >= candidates.length) {
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: Colors.grey.shade200,
+          child: const Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
+        );
+      }
+      return Image.asset(
+        candidates[index],
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => buildChain(index+1),
+      );
+    }
+
+    return buildChain(0);
+  }
+  
   Widget _badge(String text, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal:6, vertical:2),
     decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
@@ -368,48 +656,155 @@ class _CatalogCard extends StatelessWidget {
 }
 
 class _CardListingsSheet extends StatelessWidget {
-  final _CardEntry entry; final void Function(MarketplaceListing) onOpenListing; final ScrollController scrollController;
-  const _CardListingsSheet({required this.entry, required this.onOpenListing, required this.scrollController});
+  final _CardEntry entry; 
+  final void Function(MarketplaceListing) onOpenListing; 
+  final VoidCallback onCreateListing;
+  final ScrollController scrollController;
+  final void Function(MarketplaceListing)? onDeleteListing;
+  final void Function(MarketplaceListing)? onHandleListingTap;
+  
+  const _CardListingsSheet({
+    required this.entry, 
+    required this.onOpenListing, 
+    required this.onCreateListing,
+    required this.scrollController,
+    this.onDeleteListing,
+    this.onHandleListingTap,
+  });
   @override
   Widget build(BuildContext context) {
     final listings = entry.listings;
-    if (listings.isEmpty) {
-      return Center(child: Text('Aucune annonce pour ${entry.cardName.replaceAll('.png','')}'));
+    debugPrint('📋 Sheet - cardName: ${entry.cardName}, listings: ${listings.length}');
+    for (final listing in listings) {
+      debugPrint('  - ${listing.listingType} - ${listing.priceCents/100}€ (${listing.sellerId})');
     }
+    
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children:[
-          Text(entry.cardName.replaceAll('.png',''), style: const TextStyle(fontSize:18,fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              SizedBox(
+                width: 60,
+                height: 80,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildDetailCardImage(entry.cardName),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(entry.cardName.replaceAll('.png',''), style: const TextStyle(fontSize:18,fontWeight: FontWeight.bold)),
+                    if (entry.setName != null) Text(entry.setName!, style: const TextStyle(fontSize:12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height:12),
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: listings.length,
-              itemBuilder: (c,i){
-                final l = listings[i];
-                final price = (l.priceCents/100).toStringAsFixed(2);
-                return ListTile(
-                  title: Text('${l.listingType==ListingType.buy? 'Recherche':'Vente'} • $price €'),
-                  subtitle: Text(l.sellerRegion ?? '-'),
-                  trailing: Text(_statusLabel(l.status), style: const TextStyle(fontSize:12)),
-                  onTap: ()=> onOpenListing(l),
-                );
-              },
+          if (listings.isEmpty) 
+            const Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Aucune annonce pour cette carte'),
+                    SizedBox(height: 16),
+                    Text('Cliquez sur le bouton ci-dessous pour créer la première !'),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: listings.length,
+                itemBuilder: (c,i){
+                  final l = listings[i];
+                  final price = (l.priceCents/100).toStringAsFixed(2);
+                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                  final isMyListing = l.sellerId == currentUserId;
+                  
+                  return ListTile(
+                    title: Text('${l.listingType==ListingType.buy? 'Recherche':'Vente'} • $price €'),
+                    subtitle: Text(l.sellerRegion ?? '-'),
+                    trailing: isMyListing ? 
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: onDeleteListing != null ? () => onDeleteListing!(l) : null,
+                      ) : 
+                      Icon(l.listingType == ListingType.sale ? Icons.shopping_cart : Icons.message),
+                    onTap: isMyListing ? null : () => onHandleListingTap?.call(l),
+                  );
+                },
+              ),
             ),
-          )
+          // Bouton toujours présent pour créer une annonce
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Fermer le sheet
+                  onCreateListing(); // Utiliser la callback
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Créer une annonce'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
-  String _statusLabel(ListingStatus s){
-    switch(s){
-      case ListingStatus.active: return 'active';
-      case ListingStatus.reserved: return 'discussion';
-      case ListingStatus.sold: return 'vendu';
-      case ListingStatus.cancelled: return 'annulé';
+  
+  Widget _buildDetailCardImage(String fileName) {
+    // Heuristique simple: essayer chemins principaux connus; fallback icône
+    final baseNameVariantStripped = fileName.replaceAll(RegExp(r'_Variante_P\d+'), '');
+    final candidates = [
+      'assets/images/gundam_cards/newtype_risings/$fileName',
+      // fallback même dossier sans suffixe variante
+      if (baseNameVariantStripped != fileName)
+        'assets/images/gundam_cards/newtype_risings/$baseNameVariantStripped',
+      'assets/images/gundam_cards/edition_beta/$fileName',
+      if (baseNameVariantStripped != fileName)
+        'assets/images/gundam_cards/edition_beta/$baseNameVariantStripped',
+      'assets/images/Pokemon/prismatic-evolutions/$fileName',
+      if (baseNameVariantStripped != fileName)
+        'assets/images/Pokemon/prismatic-evolutions/$baseNameVariantStripped',
+    ];
+
+    Widget buildChain(int index) {
+      if (index >= candidates.length) {
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: Colors.grey.shade200,
+          child: const Icon(Icons.image_not_supported, size: 30, color: Colors.grey),
+        );
+      }
+      return Image.asset(
+        candidates[index],
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => buildChain(index+1),
+      );
     }
+
+    return buildChain(0);
   }
 }
 
@@ -424,6 +819,7 @@ class _ListingDetail extends StatefulWidget {
 
 class _ListingDetailState extends State<_ListingDetail> {
   final _service = MarketplaceService();
+  final _conversationService = ConversationService();
   final _offerController = TextEditingController();
   final _messageController = TextEditingController();
   List<int> _historical = [];
@@ -594,8 +990,63 @@ class _ListingDetailState extends State<_ListingDetail> {
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    await _service.sendMessage(widget.listing.id, text);
-    _messageController.clear();
+    
+    // Vérifier si c'est le propre listing de l'utilisateur
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == widget.listing.sellerId) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vous ne pouvez pas envoyer un message sur votre propre annonce')),
+        );
+      }
+      return;
+    }
+    
+    try {
+      // Créer une conversation si c'est un message sur un listing
+      String? conversationId;
+      
+      if (widget.listing.listingType == ListingType.sale) {
+        // Pour une vente, créer une conversation d'offre de prix avec prix 0 (simple message)
+        conversationId = await _conversationService.createBuyInquiryConversation(
+          listing: widget.listing,
+          initialMessage: text,
+        );
+      } else {
+        // Pour un achat, créer une conversation de demande d'achat
+        conversationId = await _conversationService.createBuyInquiryConversation(
+          listing: widget.listing,
+          initialMessage: text,
+        );
+      }
+      
+      if (conversationId != null) {
+        _messageController.clear();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Message envoyé ! Conversation créée.')),
+          );
+        }
+      } else {
+        // Fallback vers l'ancien système
+        await _service.sendMessage(widget.listing.id, text);
+        _messageController.clear();
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur _sendMessage: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+      // Fallback vers l'ancien système en cas d'erreur
+      try {
+        await _service.sendMessage(widget.listing.id, text);
+        _messageController.clear();
+      } catch (e2) {
+        debugPrint('❌ Erreur fallback: $e2');
+      }
+    }
   }
 
   Widget _buildValidationRow() {
@@ -823,15 +1274,40 @@ class _CreateListingDialogState extends State<_CreateListingDialog> {
   Future<void> _create() async {
     if (_selectedCard==null) return; 
     final qty = _owned[_selectedCard] ?? 0;
+    debugPrint('🔍 Create validation: card=$_selectedCard, qty=$qty, type=$_type');
+    
     if (_type == ListingType.sale && qty <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impossible de vendre: quantité 0.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impossible de vendre: quantité 0.')));
+      }
       return;
     }
     final v = double.tryParse(_priceController.text.replaceAll(',','.'));
-    if (v==null) return;
+    if (v==null || v <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prix invalide.')));
+      }
+      return;
+    }
     setState(()=> _creating=true);
-    await _service.createListing(cardName: _selectedCard!, priceCents: (v*100).round(), type: _type);
-    if (mounted) { Navigator.pop(context); }
+    
+    final listingId = await _service.createListing(cardName: _selectedCard!, priceCents: (v*100).round(), type: _type);
+    
+    if (mounted) { 
+      Navigator.pop(context);
+      if (listingId != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Annonce créée avec succès !')),
+        );
+        // Petite attente pour synchronisation Firestore puis refresh
+        await Future.delayed(const Duration(milliseconds: 1000)); // Augmenté à 1s
+        if (mounted) setState(() {}); // Force rebuild pour actualiser
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de la création de l\'annonce')),
+        );
+      }
+    }
   }
 }
 
@@ -865,6 +1341,13 @@ class _CardThumb extends StatelessWidget {
       );
     }
 
-    return SizedBox(width:32, height:44, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: buildChain(0)));
+    return SizedBox(
+      width: 32, 
+      height: 44, 
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4), 
+        child: buildChain(0)
+      )
+    );
   }
 }

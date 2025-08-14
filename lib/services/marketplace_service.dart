@@ -39,8 +39,30 @@ class MarketplaceService {
   listingType: type,
       );
 
-      final doc = await _firestore.collection('marketplace_listings').add(listing.toFirestore());
+      final data = listing.toFirestore();
+      debugPrint('🔍 DEBUG createListing data: $data');
+      debugPrint('🔍 DEBUG user: ${user.uid}, priceCents: $priceCents, cardName: $cardName, type: $type');
+      
+      final doc = await _firestore.collection('marketplace_listings').add(data);
       debugPrint('✅ Listing créé: ${doc.id}');
+      
+      // Vérifier immédiatement que le document existe
+      final verification = await doc.get();
+      if (verification.exists) {
+        debugPrint('✅ Vérification: listing existe bien dans Firestore');
+        debugPrint('✅ Données sauvées: ${verification.data()}');
+        
+        // Test direct: récupérer tous les listings pour debug
+        final allListings = await _firestore.collection('marketplace_listings').get();
+        debugPrint('🔎 Total listings en base: ${allListings.docs.length}');
+        for (final doc in allListings.docs) {
+          final data = doc.data();
+          debugPrint('   Listing: ${data['cardName']} - status: ${data['status']} - price: ${data['priceCents']}');
+        }
+      } else {
+        debugPrint('❌ ERREUR: listing non trouvé après création !');
+      }
+      
       return doc.id;
     } catch (e) {
       debugPrint('❌ Erreur createListing: $e');
@@ -54,6 +76,29 @@ class MarketplaceService {
       'priceCents': newPriceCents,
       'updatedAt': Timestamp.now(),
     });
+  }
+
+  /// Supprime une annonce
+  Future<void> deleteListing(String listingId) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Utilisateur non connecté');
+      
+      // Vérifier que c'est bien l'annonce de l'utilisateur
+      final doc = await _firestore.collection('marketplace_listings').doc(listingId).get();
+      if (!doc.exists) throw Exception('Annonce non trouvée');
+      
+      final data = doc.data()!;
+      if (data['sellerId'] != user.uid) {
+        throw Exception('Vous ne pouvez supprimer que vos propres annonces');
+      }
+      
+      await _firestore.collection('marketplace_listings').doc(listingId).delete();
+      debugPrint('✅ Listing supprimé: $listingId');
+    } catch (e) {
+      debugPrint('❌ Erreur deleteListing: $e');
+      rethrow;
+    }
   }
 
   /// Marque une annonce comme vendue (après double validation)
@@ -75,14 +120,28 @@ class MarketplaceService {
 
   /// Flux des annonces actives avec filtres simples côté client (nom / région / price range)
   Stream<List<MarketplaceListing>> listenActiveListings() {
+    debugPrint('🔄 Listening to marketplace_listings stream...');
     return _firestore
         .collection('marketplace_listings')
         .where('status', isEqualTo: 'active')
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => MarketplaceListing.fromFirestore(d.data(), d.id))
-            .toList());
+        .handleError((error) {
+          debugPrint('❌ Erreur stream: $error');
+        })
+        .map((snap) {
+          debugPrint('📡 Stream update: ${snap.docs.length} documents');
+          final listings = <MarketplaceListing>[];
+          for (final doc in snap.docs) {
+            try {
+              final listing = MarketplaceListing.fromFirestore(doc.data(), doc.id);
+              debugPrint('📝 Listing from stream: ${listing.cardName} - ${listing.priceCents/100}€ - ${listing.listingType}');
+              listings.add(listing);
+            } catch (e) {
+              debugPrint('❌ Erreur parsing listing ${doc.id}: $e');
+            }
+          }
+          return listings;
+        });
   }
 
   /// Création d'une offre (achat direct ou prix proposé)
