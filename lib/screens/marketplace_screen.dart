@@ -520,9 +520,15 @@ class _CatalogCard extends StatelessWidget {
     final collectionService = CollectionService();
     final baseName = entry.cardName.replaceAll('.png','');
     final isPokemon = baseName.startsWith('SV') || baseName.contains('_FR_');
-    final owned = isPokemon
+    int owned = isPokemon
       ? collectionService.getTotalCardQuantity(baseName)
       : collectionService.getCardQuantity(baseName);
+    // Si la quantité est 0, tester aussi la version avec .png
+    if (owned == 0) {
+      owned = isPokemon
+        ? collectionService.getTotalCardQuantity(entry.cardName)
+        : collectionService.getCardQuantity(entry.cardName);
+    }
     return InkWell(
       onTap: onTap,
       child: Card(
