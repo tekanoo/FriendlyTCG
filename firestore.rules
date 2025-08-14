@@ -115,5 +115,86 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // ---------------------------
+    // Marketplace
+    // ---------------------------
+    match /marketplace_listings/{listingId} {
+      // Lecture publique (toutes les annonces visibles)
+      allow read: if true;
+      // Création: sellerId doit correspondre à l'utilisateur connecté
+      allow create: if request.auth != null
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.cardName is string
+        && request.resource.data.priceCents is int
+        && request.resource.data.status == 'active'
+        && request.resource.data.listingType in ['sale','buy']
+        && !('buyerId' in request.resource.data);
+      // Mise à jour: seulement vendeur OU acheteur (si réservé) peut modifier champs autorisés
+      allow update: if request.auth != null && (
+        // Vendeur peut ajuster prix ou statut (cancel / reserved -> sold via validations) et flags validation
+        (request.auth.uid == resource.data.sellerId
+          && request.resource.data.sellerId == resource.data.sellerId
+          && request.resource.data.cardName == resource.data.cardName
+          && request.resource.data.priceCents is int
+          && request.resource.data.priceCents > 0
+          && request.resource.data.listingType in ['sale','buy']
+          && request.resource.data.keys().hasOnly(['sellerId','sellerName','sellerRegion','cardName','priceCents','status','createdAt','updatedAt','soldAt','buyerId','sellerValidated','buyerValidated','listingType']) )
+        ||
+        // Acheteur (réservé) peut seulement poser son flag de validation
+        (resource.data.buyerId != null && request.auth.uid == resource.data.buyerId
+          && request.resource.data.buyerValidated in [true, resource.data.buyerValidated]
+          && request.resource.data.sellerValidated == resource.data.sellerValidated
+          && request.resource.data.priceCents == resource.data.priceCents
+          && request.resource.data.sellerId == resource.data.sellerId
+          && request.resource.data.cardName == resource.data.cardName
+          && request.resource.data.status in ['reserved','sold']
+          && request.resource.data.listingType == resource.data.listingType
+          && request.resource.data.keys().hasOnly(['sellerId','sellerName','sellerRegion','cardName','priceCents','status','createdAt','updatedAt','soldAt','buyerId','sellerValidated','buyerValidated','listingType']) )
+      );
+      // Suppression: vendeur uniquement tant que non sold
+      allow delete: if request.auth != null && request.auth.uid == resource.data.sellerId && resource.data.status != 'sold';
+    }
+
+    match /marketplace_offers/{offerId} {
+      allow read: if true; // Offres visibles pour transparence (peut être restreint plus tard)
+      allow create: if request.auth != null
+        && request.resource.data.buyerId == request.auth.uid
+        && request.resource.data.listingId is string
+        && request.resource.data.proposedPriceCents is int
+        && request.resource.data.status == 'pending';
+      // Update: vendeur accepte / refuse; acheteur peut withdraw (pending seulement)
+      allow update: if request.auth != null && (
+        // Vendeur change statut -> accepted/declined
+        (request.auth.uid == get(/databases/$(database)/documents/marketplace_listings/$(resource.data.listingId)).data.sellerId
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['accepted','declined']
+          && request.resource.data.keys().hasOnly(['listingId','buyerId','buyerName','proposedPriceCents','status','createdAt','updatedAt']))
+        ||
+        // Acheteur withdraw
+        (request.auth.uid == resource.data.buyerId
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'withdrawn'
+          && request.resource.data.keys().hasOnly(['listingId','buyerId','buyerName','proposedPriceCents','status','createdAt','updatedAt']))
+      );
+      allow delete: if false; // pas de suppression (historique)
+    }
+
+    match /marketplace_messages/{messageId} {
+      // Lecture: participants (vendeur + acheteur si réservé) OU vendeur seul avant réservation
+      allow read: if request.auth != null && (
+        let listing = get(/databases/$(database)/documents/marketplace_listings/$(resource.data.listingId));
+        (request.auth.uid == listing.data.sellerId || (listing.data.buyerId != null && request.auth.uid == listing.data.buyerId))
+      );
+      // Création: même règle + senderId doit être l'utilisateur
+      allow create: if request.auth != null && (
+        let listing = get(/databases/$(database)/documents/marketplace_listings/$(request.resource.data.listingId));
+        (request.auth.uid == listing.data.sellerId || (listing.data.buyerId != null && request.auth.uid == listing.data.buyerId))
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.cipherText is string
+        && request.resource.data.timestamp == request.time
+      );
+      allow update, delete: if false;
+    }
   }
 }

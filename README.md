@@ -184,3 +184,33 @@ Publiez un post dans l'onglet Communauté ou envoyez un feedback (stocké dans F
 ---
 
 Happy collecting & trading! ✨
+
+---
+
+## 🛒 Marketplace (Nouveau)
+
+Onglet dédié à l'achat / vente de cartes entre utilisateurs.
+
+Fonctionnalités v1:
+- Liste des annonces actives (image placeholder + nom carte)
+- Filtres: nom, fourchette de prix, région (sélection rapide), disponibilité
+- Création d'annonce (service disponible – UI de création rapide à ajouter si besoin)
+- Offres sur une annonce (proposer un prix en €)
+- Historique prix (mini-bar chart basé sur les ventes passées)
+- Messagerie chiffrée côté serveur (hash SHA256 placeholder – à remplacer par vrai chiffrement ultérieurement)
+
+Modèles: `MarketplaceListing`, `ListingOffer`, `MarketplaceMessage` (`lib/models/marketplace_models.dart`).
+Service principal: `MarketplaceService` (CRUD annonces, offres, historique, messages).
+
+Sécurité & privacy:
+- Région uniquement (pas d'adresse précise)
+- Messages stockés chiffrés (placeholder) => aucun texte clair dans Firestore
+- Journalisation implicite via timestamps
+
+Prochaines étapes suggérées:
+- UI création/édition d'annonce (dialog + validation possession de la carte)
+- Double validation de vente (vendeur + acheteur) avant statut `sold`
+- Filtre avancé par jeu / extension
+- Pagination côté serveur (requêtes Firestore limitées)
+- Chiffrement réel (ex: libsodium / chiffrement asymétrique côté client)
+- Règles Firestore spécifiques (écriture restreinte par propriétaire / acheteur)

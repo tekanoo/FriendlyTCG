@@ -12,6 +12,7 @@ import 'games_screen.dart';
 import 'collection_games_screen.dart';
 import 'trades_main_screen.dart';
 import 'community_posts_screen.dart';
+import 'marketplace_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-  _tabController = TabController(length: 5, vsync: this);
+  _tabController = TabController(length: 6, vsync: this);
   WidgetsBinding.instance.addPostFrameCallback((_) => _ensureProfileSetup());
   }
 
@@ -120,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Tab(icon: Icon(Icons.home), text: 'Accueil'),
             Tab(icon: Icon(Icons.games), text: 'TCG'),
             Tab(icon: Icon(Icons.collections), text: 'Collection'),
+            Tab(icon: Icon(Icons.storefront), text: 'Marketplace'),
             Tab(icon: Icon(Icons.swap_horiz), text: 'Échanges'),
             Tab(icon: Icon(Icons.forum), text: 'Communauté'),
           ],
@@ -133,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               _HomeTab(user: user),
               const GamesScreen(),
               const CollectionGamesScreen(),
+              const MarketplaceScreen(),
               const TradesMainScreen(),
               const CommunityPostsScreen(),
             ],

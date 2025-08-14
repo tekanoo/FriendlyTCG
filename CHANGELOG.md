@@ -66,3 +66,14 @@
 - Règles Firestore `feedback` (écriture + lecture restreinte auteur) ajoutées.
 - Protection likeCount (incrément/décrément contrôlé) & like unique par utilisateur.
 - Bump version `pubspec.yaml` → 1.1.15+25.
+
+## 1.2.0+26 (proposée)
+- Ajout onglet Marketplace (achat / vente de cartes) avec:
+	- Modèles `MarketplaceListing`, `ListingOffer`, `MarketplaceMessage`
+	- Service `MarketplaceService` (CRUD annonces, offres, messages chiffrés placeholder, historique prix)
+	- Écran `MarketplaceScreen` (filtres nom / prix / région / disponibilité, grille responsive, détail avec offres + messages + historique prix)
+- Dépendances ajoutées: `crypto`, `intl`
+- Documentation: `MARKETPLACE_FEATURE.md` + section README
+- Sécurité: masque localisation exacte (affiche seulement `region`), messages stockés hashés SHA256 (à remplacer par vrai chiffrement ultérieur)
+- TODO futur: règles Firestore spécifiques, double validation vente, UI création d'annonce avancée.
+	- Ajustement: suppression de l'auto-invalidation des autres offres lors de l'acceptation (les offres pendantes restent visibles pour intérêt futur / statistiques).
