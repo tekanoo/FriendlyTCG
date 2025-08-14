@@ -44,7 +44,8 @@ class ConversationService {
         status: ConversationStatus.active,
         proposedPriceCents: proposedPriceCents,
         originalPriceCents: listing.priceCents,
-        createdAt: DateTime.now(),
+  createdAt: DateTime.now(),
+  updatedAt: DateTime.now(),
         hasUnreadSeller: true,
       );
 
@@ -92,7 +93,8 @@ class ConversationService {
         type: ConversationType.buyInquiry,
         status: ConversationStatus.active,
         originalPriceCents: listing.priceCents,
-        createdAt: DateTime.now(),
+  createdAt: DateTime.now(),
+  updatedAt: DateTime.now(),
         hasUnreadSeller: true,
       );
 

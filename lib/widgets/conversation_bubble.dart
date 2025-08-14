@@ -119,6 +119,18 @@ class _ConversationBubbleState extends State<ConversationBubble> with TickerProv
                         child: StreamBuilder<List<ConversationModel>>(
                           stream: _conversationService.listenUserConversations(),
                           builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    'Erreur chargement: '+ snapshot.error.toString(),
+                                    style: const TextStyle(color: Colors.red),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              );
+                            }
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Center(child: CircularProgressIndicator());
                             }
@@ -169,6 +181,8 @@ class _ConversationBubbleState extends State<ConversationBubble> with TickerProv
                 final hasUnread = snapshot.hasData && 
                     snapshot.data!.any((conv) => _hasUnreadMessages(conv));
                 
+                // Affiche un badge d'erreur discret si problème d'index/règles
+                final hasError = snapshot.hasError;
                 return GestureDetector(
                   onTap: _toggleExpanded,
                   child: Container(
@@ -206,6 +220,12 @@ class _ConversationBubbleState extends State<ConversationBubble> with TickerProv
                                 shape: BoxShape.circle,
                               ),
                             ),
+                          ),
+                        if (hasError)
+                          Positioned(
+                            bottom: 6,
+                            right: 6,
+                            child: Icon(Icons.error, size: 16, color: Colors.yellow.shade200),
                           ),
                       ],
                     ),
