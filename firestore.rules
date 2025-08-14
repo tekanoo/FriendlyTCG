@@ -209,10 +209,12 @@ service cloud.firestore {
     // Conversations marketplace
     // ---------------------------
     match /conversations/{conversationId} {
-      // Lecture: participant (basé sur le tableau participants)
-      allow read: if request.auth != null &&
-        resource.data.participants is list &&
-        request.auth.uid in resource.data.participants;
+      // Lecture: participant via participants[] OU sellerId/buyerId (compat rétro)
+      allow read: if request.auth != null && (
+        (resource.data.participants is list && request.auth.uid in resource.data.participants) ||
+        request.auth.uid == resource.data.sellerId ||
+        request.auth.uid == resource.data.buyerId
+      );
       
       // Création: utilisateur connecté, données valides, et tous les champs requis
       allow create: if request.auth != null && 
@@ -234,10 +236,12 @@ service cloud.firestore {
         request.resource.data.participants is list &&
         request.resource.data.participants.size() == 2;
       
-      // Mise à jour: tout participant
-      allow update: if request.auth != null &&
-        resource.data.participants is list &&
-        request.auth.uid in resource.data.participants;
+      // Mise à jour: participant (participants[] ou sellerId/buyerId)
+      allow update: if request.auth != null && (
+        (resource.data.participants is list && request.auth.uid in resource.data.participants) ||
+        request.auth.uid == resource.data.sellerId ||
+        request.auth.uid == resource.data.buyerId
+      );
       
       allow delete: if false; // pas de suppression
       

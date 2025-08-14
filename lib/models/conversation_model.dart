@@ -43,29 +43,46 @@ class ConversationModel {
   });
 
   factory ConversationModel.fromFirestore(Map<String, dynamic> data, String id) {
+    // Résilience: certains anciens documents peuvent manquer des champs (éviter crash UI)
+    Timestamp? _ts(dynamic v) => v is Timestamp ? v : null;
+    final rawType = data['type'];
+    final rawStatus = data['status'];
+    ConversationType parsedType = ConversationType.priceOffer;
+    if (rawType is String) {
+      parsedType = ConversationType.values.firstWhere(
+        (e) => e.toString().split('.').last == rawType,
+        orElse: () => ConversationType.priceOffer,
+      );
+    }
+    ConversationStatus parsedStatus = ConversationStatus.active;
+    if (rawStatus is String) {
+      parsedStatus = ConversationStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == rawStatus,
+        orElse: () => ConversationStatus.active,
+      );
+    }
+    final proposed = data['proposedPriceCents'];
     return ConversationModel(
       id: id,
-      listingId: data['listingId'] ?? '',
-      cardName: data['cardName'] ?? '',
-      sellerId: data['sellerId'] ?? '',
-      buyerId: data['buyerId'] ?? '',
-      sellerName: data['sellerName'] ?? '',
-      buyerName: data['buyerName'] ?? '',
-      type: ConversationType.values.firstWhere(
-        (e) => e.toString().split('.').last == data['type'],
-        orElse: () => ConversationType.priceOffer,
-      ),
-      status: ConversationStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == data['status'],
-        orElse: () => ConversationStatus.active,
-      ),
-      proposedPriceCents: data['proposedPriceCents'],
-      originalPriceCents: data['originalPriceCents'] ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: data['updatedAt'] != null ? (data['updatedAt'] as Timestamp).toDate() : null,
-      completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
-      hasUnreadBuyer: data['hasUnreadBuyer'] ?? false,
-      hasUnreadSeller: data['hasUnreadSeller'] ?? false,
+      listingId: data['listingId']?.toString() ?? '',
+      cardName: data['cardName']?.toString() ?? '',
+      sellerId: data['sellerId']?.toString() ?? '',
+      buyerId: data['buyerId']?.toString() ?? '',
+      sellerName: data['sellerName']?.toString() ?? '',
+      buyerName: data['buyerName']?.toString() ?? '',
+      type: parsedType,
+      status: parsedStatus,
+      proposedPriceCents: proposed is int ? proposed : (proposed is num ? proposed.toInt() : null),
+      originalPriceCents: (data['originalPriceCents'] is int)
+          ? data['originalPriceCents'] as int
+          : (data['originalPriceCents'] is num)
+              ? (data['originalPriceCents'] as num).toInt()
+              : 0,
+      createdAt: (_ts(data['createdAt']) ?? Timestamp.now()).toDate(),
+      updatedAt: _ts(data['updatedAt'])?.toDate(),
+      completedAt: _ts(data['completedAt'])?.toDate(),
+      hasUnreadBuyer: data['hasUnreadBuyer'] is bool ? data['hasUnreadBuyer'] : false,
+      hasUnreadSeller: data['hasUnreadSeller'] is bool ? data['hasUnreadSeller'] : false,
     );
   }
 

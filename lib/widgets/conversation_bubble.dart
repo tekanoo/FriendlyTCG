@@ -389,9 +389,17 @@ class _ConversationDetailDialogState extends State<_ConversationDetailDialog> {
                         ),
                       ),
                       Text(
-                        widget.conversation.type == ConversationType.priceOffer
-                            ? 'Offre de prix: ${(widget.conversation.proposedPriceCents! / 100).toStringAsFixed(2)}€'
-                            : 'Demande d\'achat',
+                        () {
+                          if (widget.conversation.type == ConversationType.priceOffer) {
+                            final cents = widget.conversation.proposedPriceCents;
+                            if (cents != null) {
+                              return 'Offre de prix: ${(cents / 100).toStringAsFixed(2)}€';
+                            } else {
+                              return 'Offre de prix';
+                            }
+                          }
+                          return 'Demande d\'achat';
+                        }(),
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
