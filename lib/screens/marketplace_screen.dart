@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/marketplace_models.dart';
 import '../services/marketplace_service.dart';
+import '../services/collection_service.dart';
 import '../services/conversation_service.dart';
 import '../widgets/conversation_bubble.dart';
 import 'dart:convert';
@@ -511,13 +512,19 @@ class _CatalogCard extends StatelessWidget {
   const _CatalogCard({required this.entry, required this.onTap});
   @override
   Widget build(BuildContext context) {
-  final price = (entry.minPriceCents / 100).toStringAsFixed(2);
-  final bestBuy = (entry.bestBuyCents / 100).toStringAsFixed(2);
+    final price = (entry.minPriceCents / 100).toStringAsFixed(2);
+    final bestBuy = (entry.bestBuyCents / 100).toStringAsFixed(2);
     final hasListings = entry.listings.isNotEmpty;
     final activeSale = entry.listings.where((l)=> l.listingType==ListingType.sale && l.status==ListingStatus.active).length;
     final activeBuy = entry.listings.where((l)=> l.listingType==ListingType.buy && l.status==ListingStatus.active).length;
+    final collectionService = CollectionService();
+    final baseName = entry.cardName.replaceAll('.png','');
+    final isPokemon = baseName.startsWith('SV') || baseName.contains('_FR_');
+    final owned = isPokemon
+      ? collectionService.getTotalCardQuantity(baseName)
+      : collectionService.getCardQuantity(baseName);
     return InkWell(
-      onTap: onTap, // Permettre clic sur toutes les cartes
+      onTap: onTap,
       child: Card(
         elevation: 1,
         child: Padding(
@@ -525,7 +532,6 @@ class _CatalogCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children:[
-              // Image de la carte
               Expanded(
                 flex: 3,
                 child: Container(
@@ -538,14 +544,7 @@ class _CatalogCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height:6),
-              // Nom de la carte
-              Text(
-                entry.cardName.replaceAll('.png',''), 
-                textAlign: TextAlign.center, 
-                style: const TextStyle(fontSize:10),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(entry.cardName.replaceAll('.png',''), textAlign: TextAlign.center, style: const TextStyle(fontSize:10), maxLines: 2, overflow: TextOverflow.ellipsis),
               const SizedBox(height:4),
               Text(hasListings ? 'dès $price €' : '0 €', style: TextStyle(fontWeight: FontWeight.bold, color: hasListings ? Colors.black : Colors.grey.shade600)),
               if (entry.bestBuyCents > 0) Text('Offre: $bestBuy €', style: const TextStyle(fontSize:10, color: Colors.black54)),
@@ -553,6 +552,10 @@ class _CatalogCard extends StatelessWidget {
               Row(children:[
                 if (activeSale>0) _badge('${activeSale}V', Colors.green.shade600),
                 if (activeBuy>0) Padding(padding: const EdgeInsets.only(left:4), child: _badge('${activeBuy}R', Colors.indigo.shade500)),
+                Padding(
+                  padding: const EdgeInsets.only(left:4),
+                  child: _badge('x$owned', owned > 0 ? Colors.blue.shade600 : Colors.red.shade400),
+                ),
               ]),
               if (entry.setName!=null) Text(entry.setName!, style: const TextStyle(fontSize:8, color: Colors.grey)),
             ],
