@@ -11,7 +11,9 @@ class MarketplaceService {
   factory MarketplaceService() => _instance;
   MarketplaceService._internal();
 
-  final _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  FirebaseFirestore get firestore => _firestore;
   final _auth = FirebaseAuth.instance;
   final _profileService = UserProfileService();
 
