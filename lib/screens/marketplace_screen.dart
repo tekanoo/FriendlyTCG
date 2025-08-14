@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/contact_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart' show rootBundle; // pour AssetManifest
 import 'package:firebase_auth/firebase_auth.dart';
@@ -461,72 +462,35 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _showMessageDialog(MarketplaceListing listing) {
-    final messageController = TextEditingController();
-    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Contacter ${listing.sellerName}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Offre d\'achat: ${(listing.priceCents / 100).toStringAsFixed(2)}€'),
-            Text('Pour: ${listing.cardName.replaceAll('.png', '')}'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: messageController,
-              decoration: const InputDecoration(
-                labelText: 'Votre message',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final message = messageController.text.trim();
-              if (message.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Veuillez saisir un message')),
-                );
-                return;
-              }
-              
-              Navigator.of(context).pop();
-              
-              try {
-                final conversationId = await _conversationService.createBuyInquiryConversation(
-                  listing: listing,
-                  initialMessage: message,
-                );
-                
-                if (conversationId != null && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Message envoyé !')),
-                  );
-                } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Erreur lors de l\'envoi')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erreur: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Envoyer'),
-          ),
-        ],
+      builder: (context) => ContactDialog(
+        title: 'Contacter ${listing.sellerName}',
+        offerText: 'Offre d\'achat: ${(listing.priceCents / 100).toStringAsFixed(2)}€',
+        cardText: 'Pour: ${listing.cardName.replaceAll('.png', '')}',
+        onSend: (message) async {
+          try {
+            final conversationId = await _conversationService.createBuyInquiryConversation(
+              listing: listing,
+              initialMessage: message,
+            );
+            if (conversationId != null && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Message envoyé !')),
+              );
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Erreur lors de l\'envoi')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Erreur lors de l\'envoi')),
+              );
+            }
+          }
+        },
       ),
     );
   }

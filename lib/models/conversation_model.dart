@@ -178,4 +178,4 @@ class ConversationMessage {
   }
 }
 
-enum ConversationMessageType { text, priceOffer, system }
+enum ConversationMessageType { text, priceOffer, purchase, system }

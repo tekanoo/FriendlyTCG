@@ -101,7 +101,7 @@ class ConversationService {
       });
       
       // Ajouter le message initial
-      await _addMessage(doc.id, initialMessage, ConversationMessageType.text);
+      await _addMessage(doc.id, initialMessage, ConversationMessageType.purchase);
 
       return doc.id;
     } catch (e) {

@@ -596,7 +596,7 @@ class _MessageBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: message.type == ConversationMessageType.priceOffer
+              color: (message.type == ConversationMessageType.priceOffer || message.type == ConversationMessageType.purchase)
                   ? Colors.orange[100]
                   : Colors.blue[50],
               borderRadius: BorderRadius.circular(12),
@@ -614,6 +614,23 @@ class _MessageBubble extends StatelessWidget {
                     ),
                     child: const Text(
                       'OFFRE DE PRIX',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                if (message.type == ConversationMessageType.purchase)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'DEMANDE D\'ACHAT',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,
