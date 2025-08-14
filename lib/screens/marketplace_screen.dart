@@ -9,6 +9,7 @@ import '../services/marketplace_service.dart';
 import '../services/collection_service.dart';
 import '../services/conversation_service.dart';
 import '../widgets/conversation_bubble.dart';
+import '../widgets/multi_offer_dialog.dart';
 import 'dart:convert';
 
 class MarketplaceScreen extends StatefulWidget {
@@ -34,6 +35,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   String? _gameFilter; // filtre jeu
   String _sortField = 'name'; // 'name' | 'price'
   bool _sortAsc = true;
+
+  // Sélection multiple pour offres groupées
+  final Set<String> _selectedCards = {};
+  bool _multiSelectMode = false;
 
   @override
   void dispose() {
@@ -81,6 +86,46 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       Column(
         children: [
           _buildFilters(isSmall),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: () => setState(() => _multiSelectMode = !_multiSelectMode),
+                child: Text(_multiSelectMode ? 'Désactiver sélection multiple' : 'Sélectionner plusieurs cartes'),
+              ),
+              if (_multiSelectMode)
+                ElevatedButton(
+                  onPressed: _selectedCards.isEmpty
+                      ? null
+                      : () async {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => MultiOfferDialog(
+                              cardNames: _selectedCards.toList(),
+                              onSend: (offers) async {
+                                // Pour chaque carte, créer une offre
+                                for (final entry in offers.entries) {
+                                  // TODO: Récupérer le listingId correspondant à la carte
+                                  // await _service.createOffer(listingId: ..., proposedPriceCents: entry.value);
+                                }
+                                setState(() {
+                                  _multiSelectMode = false;
+                                  _selectedCards.clear();
+                                });
+                              },
+                            ),
+                          );
+                        },
+                  child: Text('Créer offres groupées (${_selectedCards.length})'),
+                ),
+              if (_multiSelectMode)
+                TextButton(
+                  onPressed: () => setState(() {
+                    _selectedCards.clear();
+                  }),
+                  child: const Text('Tout désélectionner'),
+                ),
+            ],
+          ),
           Expanded(
             child: _catalogLoading ? const Center(child: CircularProgressIndicator()) : StreamBuilder<List<MarketplaceListing>>(
               stream: _service.listenActiveListings(),
