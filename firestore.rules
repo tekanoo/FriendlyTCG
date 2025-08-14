@@ -127,8 +127,10 @@ service cloud.firestore {
         && request.resource.data.sellerId == request.auth.uid
         && request.resource.data.cardName is string
         && request.resource.data.priceCents is int
+        && request.resource.data.priceCents > 0
         && request.resource.data.status == 'active'
-        && request.resource.data.listingType in ['sale','buy']
+        // listingType rétro-compatible: autoriser absence (anciennes versions) -> traité côté client comme 'sale'
+        && (!('listingType' in request.resource.data) || request.resource.data.listingType in ['sale','buy'])
         && !('buyerId' in request.resource.data);
       // Mise à jour: seulement vendeur OU acheteur (si réservé) peut modifier champs autorisés
       allow update: if request.auth != null && (
@@ -183,13 +185,21 @@ service cloud.firestore {
     match /marketplace_messages/{messageId} {
       // Lecture: participants (vendeur + acheteur si réservé) OU vendeur seul avant réservation
       allow read: if request.auth != null && (
-        let listing = get(/databases/$(database)/documents/marketplace_listings/$(resource.data.listingId));
-        (request.auth.uid == listing.data.sellerId || (listing.data.buyerId != null && request.auth.uid == listing.data.buyerId))
+        request.auth.uid == get(/databases/$(database)/documents/marketplace_listings/$(resource.data.listingId)).data.sellerId
+        || (
+          get(/databases/$(database)/documents/marketplace_listings/$(resource.data.listingId)).data.buyerId != null
+          && request.auth.uid == get(/databases/$(database)/documents/marketplace_listings/$(resource.data.listingId)).data.buyerId
+        )
       );
       // Création: même règle + senderId doit être l'utilisateur
       allow create: if request.auth != null && (
-        let listing = get(/databases/$(database)/documents/marketplace_listings/$(request.resource.data.listingId));
-        (request.auth.uid == listing.data.sellerId || (listing.data.buyerId != null && request.auth.uid == listing.data.buyerId))
+        (
+          request.auth.uid == get(/databases/$(database)/documents/marketplace_listings/$(request.resource.data.listingId)).data.sellerId
+          || (
+            get(/databases/$(database)/documents/marketplace_listings/$(request.resource.data.listingId)).data.buyerId != null
+            && request.auth.uid == get(/databases/$(database)/documents/marketplace_listings/$(request.resource.data.listingId)).data.buyerId
+          )
+        )
         && request.resource.data.senderId == request.auth.uid
         && request.resource.data.cipherText is string
         && request.resource.data.timestamp == request.time
