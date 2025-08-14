@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import '../models/conversation_model.dart';
 import '../models/marketplace_models.dart';
 import 'user_profile_service.dart';
@@ -56,11 +55,9 @@ class ConversationService {
       
       // Ajouter le message initial
       await _addMessage(doc.id, initialMessage, ConversationMessageType.priceOffer);
-      
-      debugPrint('✅ Conversation créée: ${doc.id}');
+
       return doc.id;
     } catch (e) {
-      debugPrint('❌ Erreur createPriceOfferConversation: $e');
       return null;
     }
   }
@@ -105,11 +102,9 @@ class ConversationService {
       
       // Ajouter le message initial
       await _addMessage(doc.id, initialMessage, ConversationMessageType.text);
-      
-      debugPrint('✅ Conversation créée: ${doc.id}');
+
       return doc.id;
     } catch (e) {
-      debugPrint('❌ Erreur createBuyInquiryConversation: $e');
       return null;
     }
   }
@@ -154,9 +149,7 @@ class ConversationService {
         });
       }
 
-      debugPrint('✅ Message ajouté à la conversation $conversationId');
     } catch (e) {
-      debugPrint('❌ Erreur addMessage: $e');
       rethrow;
     }
   }
@@ -177,7 +170,7 @@ class ConversationService {
         if (isSeller) 'hasUnreadSeller': false else 'hasUnreadBuyer': false,
       });
     } catch (e) {
-      debugPrint('❌ Erreur markAsRead: $e');
+      // Ignore errors
     }
   }
 
@@ -193,9 +186,7 @@ class ConversationService {
       // Ajouter un message système
       await _addMessage(conversationId, 'Échange terminé avec succès !', ConversationMessageType.system);
       
-      debugPrint('✅ Conversation terminée: $conversationId');
     } catch (e) {
-      debugPrint('❌ Erreur completeConversation: $e');
       rethrow;
     }
   }
@@ -212,9 +203,7 @@ class ConversationService {
       // Ajouter un message système
       await _addMessage(conversationId, 'Échange annulé', ConversationMessageType.system);
       
-      debugPrint('✅ Conversation annulée: $conversationId');
     } catch (e) {
-      debugPrint('❌ Erreur cancelConversation: $e');
       rethrow;
     }
   }
@@ -223,11 +212,8 @@ class ConversationService {
   Stream<List<ConversationModel>> listenUserConversations() {
     final user = _auth.currentUser;
     if (user == null) {
-      debugPrint('⚠️ listenUserConversations: Utilisateur non connecté');
       return Stream.value([]);
     }
-
-    debugPrint('🔍 listenUserConversations: Démarrage pour user ${user.uid}');
     
     return _firestore
         .collection('conversations')
@@ -235,23 +221,14 @@ class ConversationService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .handleError((error) {
-          debugPrint('❌ Erreur stream conversations: $error');
-          debugPrint('❌ Type erreur: ${error.runtimeType}');
-          if (error.toString().contains('permission-denied')) {
-            debugPrint('❌ Permission denied - vérifiez les règles Firestore');
-          }
-          if (error.toString().contains('index')) {
-            debugPrint('❌ Index manquant - vérifiez firestore.indexes.json');
-          }
+          // Ignore errors
         })
         .asyncMap((snapshot) async {
-      debugPrint('📡 Stream conversations: ${snapshot.docs.length} documents reçus');
       final conversations = <ConversationModel>[];
       
       for (final doc in snapshot.docs) {
         try {
           final data = doc.data();
-          debugPrint('📄 Doc ${doc.id}: participants=${data['participants']}, sellerId=${data['sellerId']}, buyerId=${data['buyerId']}');
           
           final conversation = ConversationModel.fromFirestore(data, doc.id);
           
@@ -269,14 +246,11 @@ class ConversationService {
               .toList();
 
           conversations.add(conversation.copyWith(messages: messages.reversed.toList()));
-          debugPrint('✅ Conversation ${doc.id} ajoutée (${conversation.type}, ${conversation.status})');
         } catch (e) {
-          debugPrint('❌ Erreur parsing conversation ${doc.id}: $e');
-          debugPrint('❌ Stack: ${StackTrace.current}');
+          // Ignore parsing errors
         }
       }
       
-      debugPrint('📋 Total conversations parsées: ${conversations.length}');
       return conversations;
     });
   }

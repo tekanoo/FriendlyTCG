@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../models/user_with_location.dart';
 
@@ -25,9 +24,8 @@ class TradeService {
         'lastSeen': Timestamp.now(),
       }, SetOptions(merge: true));
 
-      debugPrint('✅ Informations utilisateur mises à jour');
     } catch (e) {
-      debugPrint('❌ Erreur mise à jour utilisateur: $e');
+      // Erreur silencieuse pour éviter d'interrompre l'app
     }
   }
 
@@ -65,14 +63,12 @@ class TradeService {
             }
           }
         } catch (e) {
-          debugPrint('❌ Erreur lors du traitement de l\'utilisateur ${doc.id}: $e');
+          // Erreur silencieuse lors du traitement d'un utilisateur
         }
       }
 
-      debugPrint('✅ Recherche terminée pour ${cardNames.length} cartes');
       return result;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la recherche d\'utilisateurs: $e');
       return {};
     }
   }
@@ -108,14 +104,12 @@ class TradeService {
             }
           }
         } catch (e) {
-          debugPrint('❌ Erreur lors du traitement de l\'utilisateur ${doc.id}: $e');
+          // Erreur silencieuse lors du traitement d'un utilisateur
         }
       }
 
-      debugPrint('✅ Recherche terminée pour ${cardNames.length} cartes');
       return result;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la recherche d\'utilisateurs: $e');
       return {};
     }
   }
@@ -142,14 +136,12 @@ class TradeService {
           final user = UserModel.fromFirestore(userData, doc.id);
           users.add(user);
         } catch (e) {
-          debugPrint('❌ Erreur lors du traitement de l\'utilisateur ${doc.id}: $e');
+          // Erreur silencieuse lors du traitement d'un utilisateur
         }
       }
 
-      debugPrint('✅ ${users.length} utilisateurs récupérés');
       return users;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération des utilisateurs: $e');
       return [];
     }
   }
@@ -176,14 +168,12 @@ class TradeService {
           final user = UserModel.fromFirestore(userData, doc.id);
           users.add(user);
         } catch (e) {
-          debugPrint('❌ Erreur lors du traitement de l\'utilisateur ${doc.id}: $e');
+          // Erreur silencieuse lors du traitement d'un utilisateur
         }
       }
 
-      debugPrint('✅ ${users.length} utilisateurs trouvés avec la carte $cardName');
       return users;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la recherche de carte: $e');
       return [];
     }
   }

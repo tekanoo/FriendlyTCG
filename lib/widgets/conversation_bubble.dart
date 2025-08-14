@@ -74,7 +74,7 @@ class _ConversationBubbleState extends State<ConversationBubble> with TickerProv
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -124,7 +124,7 @@ class _ConversationBubbleState extends State<ConversationBubble> with TickerProv
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Text(
-                                    'Erreur chargement: '+ snapshot.error.toString(),
+                                    'Erreur chargement: ${snapshot.error}',
                                     style: const TextStyle(color: Colors.red),
                                     textAlign: TextAlign.center,
                                   ),
@@ -193,7 +193,7 @@ class _ConversationBubbleState extends State<ConversationBubble> with TickerProv
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -283,7 +283,7 @@ class _ConversationTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       leading: CircleAvatar(
-        backgroundColor: statusColor.withOpacity(0.1),
+        backgroundColor: statusColor.withValues(alpha: 0.1),
         child: Icon(
           conversation.type == ConversationType.priceOffer 
               ? Icons.attach_money 
@@ -312,7 +312,7 @@ class _ConversationTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -426,7 +426,10 @@ class _ConversationDetailDialogState extends State<_ConversationDetailDialog> {
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index];
-                      return _MessageBubble(message: message);
+                      return _MessageBubble(
+                        message: message, 
+                        conversation: widget.conversation,
+                      );
                     },
                   );
                 },
@@ -545,8 +548,12 @@ class _ConversationDetailDialogState extends State<_ConversationDetailDialog> {
 
 class _MessageBubble extends StatelessWidget {
   final ConversationMessage message;
+  final ConversationModel conversation;
 
-  const _MessageBubble({required this.message});
+  const _MessageBubble({
+    required this.message,
+    required this.conversation,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -83,21 +83,14 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             child: _catalogLoading ? const Center(child: CircularProgressIndicator()) : StreamBuilder<List<MarketplaceListing>>(
               stream: _service.listenActiveListings(),
               builder: (context, snapshot) {
-                debugPrint('🔍 StreamBuilder update: hasData=${snapshot.hasData}, data length=${snapshot.data?.length ?? 0}');
                 if (snapshot.hasData) {
-                  for (final listing in snapshot.data!) {
-                    debugPrint('📋 Listing: ${listing.cardName} - ${listing.priceCents/100}€ - ${listing.status} - ${listing.listingType}');
-                  }
+                  // Traitement des données sans variable inutilisée
                 }
                 final activeListings = snapshot.data ?? [];
                 // Regrouper par carte
                 final Map<String, List<MarketplaceListing>> byCard = {};
                 for (final l in activeListings) {
                   (byCard[l.cardName] ??= []).add(l);
-                }
-                debugPrint('🗂️ Regroupement: ${byCard.length} cartes avec listings');
-                for (final entry in byCard.entries) {
-                  debugPrint('   ${entry.key}: ${entry.value.length} listings');
                 }
                 // Construire entrées catalogue
                 final term = _searchController.text.trim().toLowerCase();
@@ -133,12 +126,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   final bestBuy = filteredListings.where((l)=> l.listingType == ListingType.buy).map((l)=> l.priceCents).fold<int?>(null,(prev,e)=> prev==null? e : (e > prev ? e : prev)) ?? 0;
                   
                   if (card == 'GD01-001.png') { // Debug pour la carte testée
-                    debugPrint('🎯 Debug GD01-001.png:');
-                    debugPrint('   - filteredListings: ${filteredListings.length}');
-                    debugPrint('   - sales: ${filteredListings.where((l)=> l.listingType == ListingType.sale).length}');
-                    debugPrint('   - buys: ${filteredListings.where((l)=> l.listingType == ListingType.buy).length}');
-                    debugPrint('   - minPrice: $minPrice');
-                    debugPrint('   - bestBuy: $bestBuy');
                   }
                   entries.add(_CardEntry(
                     cardName: card,
@@ -674,10 +661,6 @@ class _CardListingsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final listings = entry.listings;
-    debugPrint('📋 Sheet - cardName: ${entry.cardName}, listings: ${listings.length}');
-    for (final listing in listings) {
-      debugPrint('  - ${listing.listingType} - ${listing.priceCents/100}€ (${listing.sellerId})');
-    }
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1033,7 +1016,6 @@ class _ListingDetailState extends State<_ListingDetail> {
         _messageController.clear();
       }
     } catch (e) {
-      debugPrint('❌ Erreur _sendMessage: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur: ${e.toString()}')),
@@ -1044,7 +1026,6 @@ class _ListingDetailState extends State<_ListingDetail> {
         await _service.sendMessage(widget.listing.id, text);
         _messageController.clear();
       } catch (e2) {
-        debugPrint('❌ Erreur fallback: $e2');
       }
     }
   }
@@ -1274,7 +1255,6 @@ class _CreateListingDialogState extends State<_CreateListingDialog> {
   Future<void> _create() async {
     if (_selectedCard==null) return; 
     final qty = _owned[_selectedCard] ?? 0;
-    debugPrint('🔍 Create validation: card=$_selectedCard, qty=$qty, type=$_type');
     
     if (_type == ListingType.sale && qty <= 0) {
       if (mounted) {

@@ -11,26 +11,12 @@ class AuthService {
 
   // Stream pour écouter les changements d'état d'authentification
   Stream<User?> get authStateChanges {
-    return _firebaseAuth.authStateChanges().map((User? user) {
-      debugPrint('=== AuthService: Changement d\'état d\'authentification ===');
-      if (user != null) {
-        debugPrint('AuthService: Utilisateur connecté: ${user.email}');
-        debugPrint('AuthService: UID: ${user.uid}');
-      } else {
-        debugPrint('AuthService: Aucun utilisateur connecté');
-      }
-      return user;
-    });
+    return _firebaseAuth.authStateChanges();
   }
 
   // Connexion avec Google - Version simplifiée pour le web
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      debugPrint('🔗 URL actuelle: ${Uri.base}');
-      debugPrint('🔗 Host: ${Uri.base.host}');
-      debugPrint('🔗 Port: ${Uri.base.port}');
-      debugPrint('🔗 Scheme: ${Uri.base.scheme}');
-      
       // Créer un provider Google
       GoogleAuthProvider googleProvider = GoogleAuthProvider();
       
@@ -48,9 +34,7 @@ class AuthService {
       if (kIsWeb) {
         // Pour le web, utiliser signInWithPopup avec gestion d'erreurs améliorée
         try {
-          debugPrint('Tentative de connexion avec popup...');
           final result = await _firebaseAuth.signInWithPopup(googleProvider);
-          debugPrint('Connexion popup réussie: ${result.user?.email}');
           
           // Analytics : connexion réussie
           if (result.user != null) {
@@ -64,17 +48,7 @@ class AuthService {
           
           return result;
         } catch (popupError) {
-          debugPrint('Erreur popup: $popupError');
-          debugPrint('Type d\'erreur: ${popupError.runtimeType}');
-          
-          // Log spécifique pour redirect_uri_mismatch
-          if (popupError.toString().contains('redirect_uri_mismatch')) {
-            debugPrint('❌ ERREUR REDIRECT_URI_MISMATCH détectée!');
-            debugPrint('🔧 Vérifiez la configuration OAuth dans Google Cloud Console');
-            debugPrint('📍 URL actuelle à autoriser: ${Uri.base.scheme}://${Uri.base.host}${Uri.base.port != 80 && Uri.base.port != 443 ? ':${Uri.base.port}' : ''}/__/auth/handler');
-          }
           // Fallback vers redirect si popup échoue
-          debugPrint('Fallback vers redirect...');
           await _firebaseAuth.signInWithRedirect(googleProvider);
           return null; // Le redirect gérera la suite
         }
@@ -83,8 +57,6 @@ class AuthService {
         return await _firebaseAuth.signInWithPopup(googleProvider);
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint('Erreur Firebase Auth: ${e.code} - ${e.message}');
-      
       // Gestion des erreurs spécifiques
       switch (e.code) {
         case 'popup-blocked':
@@ -99,7 +71,6 @@ class AuthService {
           throw Exception('Erreur d\'authentification: ${e.message}');
       }
     } catch (e) {
-      debugPrint('Erreur générale: $e');
       throw Exception('Erreur lors de la connexion. Réessayez plus tard.');
     }
   }
@@ -107,13 +78,8 @@ class AuthService {
   // Vérifier s'il y a un résultat de redirection en attente
   Future<UserCredential?> checkRedirectResult() async {
     try {
-      debugPrint('=== AuthService: Vérification du résultat de redirection ===');
       final result = await _firebaseAuth.getRedirectResult();
       if (result.user != null) {
-        debugPrint('AuthService: Utilisateur connecté via redirect: ${result.user?.email}');
-        debugPrint('AuthService: User UID: ${result.user?.uid}');
-        debugPrint('AuthService: User displayName: ${result.user?.displayName}');
-        
         // Analytics : connexion via redirect réussie
         final analyticsService = AnalyticsService();
         await analyticsService.logLogin(method: 'google_redirect');
@@ -123,12 +89,9 @@ class AuthService {
         );
         
         return result;
-      } else {
-        debugPrint('AuthService: Aucun résultat de redirection (result.user est null)');
       }
       return null;
     } catch (e) {
-      debugPrint('AuthService: Erreur lors de la vérification du redirect: $e');
       return null;
     }
   }
@@ -146,7 +109,6 @@ class AuthService {
       
       await _firebaseAuth.signOut();
     } catch (e) {
-      debugPrint('Erreur déconnexion: $e');
       rethrow;
     }
   }

@@ -35,8 +35,7 @@ class FeedbackService {
         'appVersion': appVersion,
         'status': 'open',
       });
-    } catch (e, st) {
-      debugPrint('❌ Erreur envoi feedback: $e\n$st');
+    } catch (e) {
       rethrow;
     }
   }

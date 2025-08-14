@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import '../models/user_profile_model.dart';
 
 class UserProfileService {
@@ -16,27 +15,21 @@ class UserProfileService {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        debugPrint('❌ Utilisateur non connecté');
         return null;
       }
 
-      debugPrint('🔄 Chargement du profil pour: ${user.uid}');
       
       final doc = await _firestore.collection('users').doc(user.uid).get();
       if (!doc.exists) {
-        debugPrint('⚠️ Document utilisateur n\'existe pas');
         return null;
       }
 
       final data = doc.data()!;
-      debugPrint('🔍 Données récupérées de Firestore: $data');
       
       final profile = UserProfileModel.fromMap(data, user.uid);
-      debugPrint('🔍 Profil décodé - country: "${profile.country}", region: "${profile.region}", city: "${profile.city}"');
       
       return profile;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération du profil: $e');
       return null;
     }
   }
@@ -55,10 +48,8 @@ class UserProfileService {
         SetOptions(merge: true),
       );
 
-      debugPrint('✅ Profil utilisateur mis à jour');
       return true;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la mise à jour du profil: $e');
       return false;
     }
   }
@@ -72,18 +63,15 @@ class UserProfileService {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        debugPrint('❌ Utilisateur non connecté');
         return false;
       }
 
-      debugPrint('🔄 INPUT - country: "$country", region: "$region", city: "$city"');
 
       // Validation stricte des données
       final cleanCountry = country?.trim();
       final cleanRegion = region?.trim();
       final cleanCity = city?.trim();
 
-      debugPrint('🔄 CLEAN - country: "$cleanCountry", region: "$cleanRegion", city: "$cleanCity"');
 
       final Map<String, dynamic> locationData = {
         'lastUpdated': FieldValue.serverTimestamp(),
@@ -92,23 +80,18 @@ class UserProfileService {
         'city': cleanCity?.isNotEmpty == true ? cleanCity : null,
       };
 
-      debugPrint('🔄 Données finales à sauvegarder: $locationData');
 
       await _firestore.collection('users').doc(user.uid).set(
         locationData,
         SetOptions(merge: true),
       );
 
-      debugPrint('✅ Sauvegarde terminée, vérification...');
 
       // Vérification immédiate après sauvegarde
-      final docSnapshot = await _firestore.collection('users').doc(user.uid).get();
-      final savedData = docSnapshot.data();
-      debugPrint('🔍 Données vérifiées dans Firestore: $savedData');
+      await _firestore.collection('users').doc(user.uid).get();
       
       return true;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la mise à jour de la localisation: $e');
       return false;
     }
   }
@@ -139,7 +122,6 @@ class UserProfileService {
       }).toList();
 
     } catch (e) {
-      debugPrint('❌ Erreur lors de la recherche d\'utilisateurs: $e');
       return [];
     }
   }
@@ -178,7 +160,6 @@ class UserProfileService {
       return users;
 
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération des utilisateurs actifs: $e');
       return [];
     }
   }
@@ -194,7 +175,6 @@ class UserProfileService {
       }, SetOptions(merge: true));
 
     } catch (e) {
-      debugPrint('❌ Erreur lors de la mise à jour de lastSeen: $e');
     }
   }
 
@@ -222,7 +202,6 @@ class UserProfileService {
           .toList();
 
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération des pays populaires: $e');
       return [];
     }
   }

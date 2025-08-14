@@ -4,7 +4,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../lib/firebase_options.dart';
+import 'package:friendly_tcg_app/firebase_options.dart';
 
 Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -23,7 +23,7 @@ Future<void> main() async {
 
   for (final doc in snapshot.docs) {
     final data = doc.data();
-    final needsParticipants = !(data['participants'] is List) && data['sellerId'] is String && data['buyerId'] is String;
+    final needsParticipants = data['participants'] is! List && data['sellerId'] is String && data['buyerId'] is String;
     final needsUpdatedAt = data['updatedAt'] == null;
     if (needsParticipants || needsUpdatedAt) {
       batch ??= fs.batch();

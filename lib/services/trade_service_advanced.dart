@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import '../models/trade_model.dart';
 
 class TradeServiceAdvanced {
@@ -11,7 +10,49 @@ class TradeServiceAdvanced {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Créer une nouvelle demande d'échange
+  // Créer une conversation simple sans échange spécifique
+  Future<String?> createSimpleConversation({
+    required String toUserId,
+    required String toUserName,
+    required String cardOfInterest,
+  }) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) throw Exception('Utilisateur non connecté');
+
+      final trade = TradeModel(
+        id: '',
+        fromUserId: currentUser.uid,
+        toUserId: toUserId,
+        fromUserName: currentUser.displayName ?? currentUser.email ?? 'Utilisateur',
+        toUserName: toUserName,
+        wantedCard: cardOfInterest,
+        offeredCard: '', // Pas de carte spécifique offerte
+        status: TradeStatus.pending,
+        createdAt: DateTime.now(),
+      );
+
+      final docRef = await _firestore.collection('trades').add(trade.toFirestore());
+      
+      // Ajouter un message système initial
+      await _sendSystemMessage(
+        docRef.id,
+        '${trade.fromUserName} s\'intéresse à la carte ${cardOfInterest.replaceAll('.png', '')}',
+      );
+
+      // Ajouter le message de sécurité
+      await _sendSystemMessage(
+        docRef.id,
+        '⚠️ IMPORTANT: Ne partagez jamais d\'informations personnelles sensibles. Pour les rencontres physiques, choisissez toujours un lieu public et sûr.',
+      );
+
+      return docRef.id;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Créer une nouvelle demande d'échange (gardé pour compatibilité)
   Future<String?> createTradeRequest({
     required String toUserId,
     required String toUserName,
@@ -57,10 +98,8 @@ class TradeServiceAdvanced {
         '⚠️ IMPORTANT: Ne partagez jamais d\'informations personnelles sensibles. Pour les rencontres physiques, choisissez toujours un lieu public et sûr.',
       );
 
-      debugPrint('✅ Demande d\'échange créée: ${docRef.id}');
       return docRef.id;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la création de l\'échange: $e');
       rethrow;
     }
   }
@@ -88,10 +127,8 @@ class TradeServiceAdvanced {
         }
       }
 
-      debugPrint('✅ ${cardsToOffer.length} cartes disponibles pour l\'échange');
       return cardsToOffer;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération des cartes à offrir: $e');
       return [];
     }
   }
@@ -105,7 +142,6 @@ class TradeServiceAdvanced {
         'Échange accepté! Vous pouvez maintenant discuter pour organiser la rencontre.',
       );
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'acceptation de l\'échange: $e');
       rethrow;
     }
   }
@@ -116,7 +152,6 @@ class TradeServiceAdvanced {
       await _updateTradeStatus(tradeId, TradeStatus.declined);
       await _sendSystemMessage(tradeId, 'Échange refusé.');
     } catch (e) {
-      debugPrint('❌ Erreur lors du refus de l\'échange: $e');
       rethrow;
     }
   }
@@ -127,7 +162,6 @@ class TradeServiceAdvanced {
       await _updateTradeStatus(tradeId, TradeStatus.completed);
       await _sendSystemMessage(tradeId, 'Échange terminé avec succès!');
     } catch (e) {
-      debugPrint('❌ Erreur lors de la finalisation de l\'échange: $e');
       rethrow;
     }
   }
@@ -138,7 +172,6 @@ class TradeServiceAdvanced {
       await _updateTradeStatus(tradeId, TradeStatus.cancelled);
       await _sendSystemMessage(tradeId, 'Échange annulé.');
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'annulation de l\'échange: $e');
       rethrow;
     }
   }
@@ -167,9 +200,7 @@ class TradeServiceAdvanced {
       );
 
       await _firestore.collection('trade_messages').add(tradeMessage.toFirestore());
-      debugPrint('✅ Message envoyé');
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'envoi du message: $e');
       rethrow;
     }
   }
@@ -189,7 +220,6 @@ class TradeServiceAdvanced {
 
       await _firestore.collection('trade_messages').add(systemMessage.toFirestore());
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'envoi du message système: $e');
     }
   }
 
@@ -235,7 +265,6 @@ class TradeServiceAdvanced {
       if (!doc.exists) return null;
       return TradeModel.fromFirestore(doc.data()!, doc.id);
     } catch (e) {
-      debugPrint('❌ Erreur lors de la récupération de l\'échange: $e');
       return null;
     }
   }

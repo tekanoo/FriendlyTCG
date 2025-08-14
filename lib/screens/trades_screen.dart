@@ -13,6 +13,7 @@ import '../widgets/pagination_controls.dart';
 // import 'trade_offer_screen.dart'; // removed unused direct navigation
 import '../services/trade_service_advanced.dart';
 import 'my_trades_screen.dart';
+import 'simple_conversation_screen.dart';
 
 class TradesScreen extends StatefulWidget {
   const TradesScreen({super.key});
@@ -869,26 +870,15 @@ class _TradesScreenState extends State<TradesScreen> {
       ),
       avatar: Icon(alreadyTraded ? Icons.check : Icons.add, size: 16, color: alreadyTraded ? Colors.green : null),
       onPressed: alreadyTraded ? null : () async {
-        final offerable = await _getOfferableCardsForUser(user.uid);
-        if (!mounted) return;
-        if (offerable.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aucune carte à offrir.')),);
-          return;
-        }
-        final created = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => _SingleTradeDialog(
-            wantedCard: cardName,
-            offerableCards: offerable,
-            onCreate: (wanted, offered) async {
-              await _createSingleTrade(wanted, offered, user);
-              return '';
-            },
-            extensionId: _selectedExtension?.id,
+        // Navigation directe vers l'écran de conversation simple
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SimpleConversationScreen(
+              targetUser: user,
+              cardOfInterest: cardName,
+            ),
           ),
         );
-        if (created == true) setState(() {});
       },
       selected: alreadyTraded,
       backgroundColor: alreadyTraded ? Colors.green.shade50 : null,
@@ -1137,13 +1127,11 @@ class _SingleTradeDialog extends StatefulWidget {
   final String wantedCard;
   final List<String> offerableCards; // cartes possédées non possédées par l'autre
   final Future<String?> Function(String wanted, String offered) onCreate;
-  final String? extensionId; // pour images
 
   const _SingleTradeDialog({
     required this.wantedCard,
     required this.offerableCards,
     required this.onCreate,
-  this.extensionId,
   });
 
   @override
@@ -1163,16 +1151,6 @@ class _SingleTradeDialogState extends State<_SingleTradeDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.extensionId != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom:8.0),
-                  child: Image.asset(
-                    AutoGameService.getCardImagePath(widget.extensionId!, widget.wantedCard),
-                    height: 140,
-                    fit: BoxFit.contain,
-                    errorBuilder: (c,_,__)=>(const Icon(Icons.image_not_supported,size:48,color: Colors.grey)),
-                  ),
-                ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Choisissez la carte que vous offrez:', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
@@ -1200,19 +1178,6 @@ class _SingleTradeDialogState extends State<_SingleTradeDialog> {
                           ),
                           title: Row(
                             children: [
-                              if (widget.extensionId != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right:8.0),
-                                  child: SizedBox(
-                                    width: 44,
-                                    height: 60,
-                                    child: Image.asset(
-                                      AutoGameService.getCardImagePath(widget.extensionId!, card),
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (c,_,__)=>(const Icon(Icons.image_not_supported,size:20,color: Colors.grey)),
-                                    ),
-                                  ),
-                                ),
                               Expanded(child: Text('$display  (x${CollectionService().getCardQuantity(card)})')),
                             ],
                           ),

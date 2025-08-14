@@ -24,29 +24,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkRedirectResult() async {
     try {
-      debugPrint('=== AuthWrapper: Vérification du résultat de redirection ===');
       final result = await _authService.checkRedirectResult();
-      if (result != null) {
-        debugPrint('AuthWrapper: Utilisateur connecté via redirect: ${result.user?.email}');
+      if (result?.user != null) {
+        // Utilisateur connecté via redirect
       } else {
-        debugPrint('AuthWrapper: Aucun résultat de redirection');
+        // Aucun résultat de redirection
       }
     } catch (e) {
-      debugPrint('AuthWrapper: Erreur lors de la vérification du redirect: $e');
+      // Erreur lors de la vérification du redirect
     } finally {
       if (mounted) {
         setState(() {
           _isCheckingRedirect = false;
         });
-        debugPrint('AuthWrapper: Fin de la vérification du redirect');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('AuthWrapper: Build appelé, _isCheckingRedirect=$_isCheckingRedirect');
-    
     if (_isCheckingRedirect) {
       return const Scaffold(
         body: Center(
@@ -65,14 +61,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return StreamBuilder<User?>(
       stream: _authService.authStateChanges,
       builder: (context, snapshot) {
-        debugPrint('AuthWrapper: StreamBuilder appelé');
-        debugPrint('  - connectionState: ${snapshot.connectionState}');
-        debugPrint('  - hasData: ${snapshot.hasData}');
-        debugPrint('  - data: ${snapshot.data?.email ?? 'null'}');
-        
         // En cours de chargement
         if (snapshot.connectionState == ConnectionState.waiting) {
-          debugPrint('AuthWrapper: En attente de la connexion...');
           return const Scaffold(
             body: Center(
               child: Column(
@@ -90,7 +80,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         // Utilisateur connecté
         if (snapshot.hasData && snapshot.data != null) {
           final user = snapshot.data!;
-          debugPrint('AuthWrapper: Utilisateur connecté détecté: ${user.email}');
           
           // Vérifier si l'onboarding est nécessaire
           final needsOnboarding = user.displayName == null || 
@@ -98,16 +87,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
                                   user.displayName == user.email?.split('@').first;
           
           if (needsOnboarding) {
-            debugPrint('AuthWrapper: Onboarding nécessaire pour ${user.email}');
             return const OnboardingScreen();
           }
           
-          debugPrint('AuthWrapper: Affichage de HomeScreen');
           return const HomeScreen();
         }
         
         // Utilisateur non connecté
-        debugPrint('AuthWrapper: Aucun utilisateur connecté, affichage de l\'écran de connexion');
         return const LoginScreen();
       },
     );

@@ -23,7 +23,6 @@ class AnalyticsService {
       _observer = FirebaseAnalyticsObserver(analytics: _analytics);
       _isInitialized = true;
       
-      debugPrint('✅ Firebase Analytics initialisé');
       
       if (!FeatureFlags.analyticsMinimal) {
         // Envoyer un événement de démarrage uniquement hors mode minimal
@@ -31,7 +30,6 @@ class AnalyticsService {
       }
       
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'initialisation de Firebase Analytics: $e');
       _isInitialized = false;
     }
   }
@@ -48,9 +46,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: app_start');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics app_start: $e');
     }
   }
 
@@ -60,9 +56,7 @@ class AnalyticsService {
     
     try {
       await _analytics.logLogin(loginMethod: method ?? 'google');
-      debugPrint('📊 Analytics: login - $method');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics login: $e');
     }
   }
 
@@ -77,9 +71,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: logout');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics logout: $e');
     }
   }
 
@@ -95,10 +87,8 @@ class AnalyticsService {
         screenName: screenName,
         screenClass: screenClass ?? screenName,
       );
-      debugPrint('📊 Analytics: screen_view - $screenName');
       _sentScreens.add(screenName);
     } catch (e) {
-      debugPrint('❌ Erreur Analytics screen_view: $e');
     }
   }
 
@@ -116,9 +106,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: add_card - $cardName');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics add_card: $e');
     }
   }
 
@@ -136,9 +124,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: remove_card - $cardName');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics remove_card: $e');
     }
   }
 
@@ -155,9 +141,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: view_game - $gameName');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics view_game: $e');
     }
   }
 
@@ -175,9 +159,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: view_extension - $extensionName');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics view_extension: $e');
     }
   }
 
@@ -192,9 +174,7 @@ class AnalyticsService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
       );
-      debugPrint('📊 Analytics: create_trade');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics create_trade: $e');
     }
   }
 
@@ -219,9 +199,7 @@ class AnalyticsService {
         );
       }
       
-      debugPrint('📊 Analytics: user_properties configurées');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics user_properties: $e');
     }
   }
 
@@ -245,9 +223,7 @@ class AnalyticsService {
           ...cardsByGame,
         },
       );
-      debugPrint('📊 Analytics: collection_stats - $totalCards cartes');
     } catch (e) {
-      debugPrint('❌ Erreur Analytics collection_stats: $e');
     }
   }
 }

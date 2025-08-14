@@ -177,7 +177,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() => _isSaving = true);
 
     try {
-      debugPrint('🔄 Sauvegarde du profil avec: country="$country", region="$region", city="$city"');
       
       // Mettre à jour Firestore (displayName + localisation)
       final user = FirebaseAuth.instance.currentUser;

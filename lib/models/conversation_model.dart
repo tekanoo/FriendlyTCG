@@ -44,7 +44,7 @@ class ConversationModel {
 
   factory ConversationModel.fromFirestore(Map<String, dynamic> data, String id) {
     // Résilience: certains anciens documents peuvent manquer des champs (éviter crash UI)
-    Timestamp? _ts(dynamic v) => v is Timestamp ? v : null;
+    Timestamp? timestampHelper(dynamic v) => v is Timestamp ? v : null;
     final rawType = data['type'];
     final rawStatus = data['status'];
     ConversationType parsedType = ConversationType.priceOffer;
@@ -78,9 +78,9 @@ class ConversationModel {
           : (data['originalPriceCents'] is num)
               ? (data['originalPriceCents'] as num).toInt()
               : 0,
-      createdAt: (_ts(data['createdAt']) ?? Timestamp.now()).toDate(),
-      updatedAt: _ts(data['updatedAt'])?.toDate(),
-      completedAt: _ts(data['completedAt'])?.toDate(),
+      createdAt: (timestampHelper(data['createdAt']) ?? Timestamp.now()).toDate(),
+      updatedAt: timestampHelper(data['updatedAt'])?.toDate(),
+      completedAt: timestampHelper(data['completedAt'])?.toDate(),
       hasUnreadBuyer: data['hasUnreadBuyer'] is bool ? data['hasUnreadBuyer'] : false,
       hasUnreadSeller: data['hasUnreadSeller'] is bool ? data['hasUnreadSeller'] : false,
     );

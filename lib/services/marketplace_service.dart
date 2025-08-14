@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import '../models/marketplace_models.dart';
 import 'user_profile_service.dart';
 
@@ -40,32 +39,22 @@ class MarketplaceService {
       );
 
       final data = listing.toFirestore();
-      debugPrint('🔍 DEBUG createListing data: $data');
-      debugPrint('🔍 DEBUG user: ${user.uid}, priceCents: $priceCents, cardName: $cardName, type: $type');
       
       final doc = await _firestore.collection('marketplace_listings').add(data);
-      debugPrint('✅ Listing créé: ${doc.id}');
       
       // Vérifier immédiatement que le document existe
       final verification = await doc.get();
       if (verification.exists) {
-        debugPrint('✅ Vérification: listing existe bien dans Firestore');
-        debugPrint('✅ Données sauvées: ${verification.data()}');
         
         // Test direct: récupérer tous les listings pour debug
         final allListings = await _firestore.collection('marketplace_listings').get();
-        debugPrint('🔎 Total listings en base: ${allListings.docs.length}');
-        for (final doc in allListings.docs) {
-          final data = doc.data();
-          debugPrint('   Listing: ${data['cardName']} - status: ${data['status']} - price: ${data['priceCents']}');
-        }
+        // Traitement de tous les documents
+        allListings.docs.length; // Vérification du nombre de documents
       } else {
-        debugPrint('❌ ERREUR: listing non trouvé après création !');
       }
       
       return doc.id;
     } catch (e) {
-      debugPrint('❌ Erreur createListing: $e');
       return null;
     }
   }
@@ -94,9 +83,7 @@ class MarketplaceService {
       }
       
       await _firestore.collection('marketplace_listings').doc(listingId).delete();
-      debugPrint('✅ Listing supprimé: $listingId');
     } catch (e) {
-      debugPrint('❌ Erreur deleteListing: $e');
       rethrow;
     }
   }
@@ -120,24 +107,19 @@ class MarketplaceService {
 
   /// Flux des annonces actives avec filtres simples côté client (nom / région / price range)
   Stream<List<MarketplaceListing>> listenActiveListings() {
-    debugPrint('🔄 Listening to marketplace_listings stream...');
     return _firestore
         .collection('marketplace_listings')
         .where('status', isEqualTo: 'active')
         .snapshots()
         .handleError((error) {
-          debugPrint('❌ Erreur stream: $error');
         })
         .map((snap) {
-          debugPrint('📡 Stream update: ${snap.docs.length} documents');
           final listings = <MarketplaceListing>[];
           for (final doc in snap.docs) {
             try {
               final listing = MarketplaceListing.fromFirestore(doc.data(), doc.id);
-              debugPrint('📝 Listing from stream: ${listing.cardName} - ${listing.priceCents/100}€ - ${listing.listingType}');
               listings.add(listing);
             } catch (e) {
-              debugPrint('❌ Erreur parsing listing ${doc.id}: $e');
             }
           }
           return listings;
@@ -170,7 +152,6 @@ class MarketplaceService {
       await _sendSystemMessage(listingId, 'Nouvelle offre: ${(proposedPriceCents / 100).toStringAsFixed(2)}€');
       return doc.id;
     } catch (e) {
-      debugPrint('❌ Erreur createOffer: $e');
       return null;
     }
   }
