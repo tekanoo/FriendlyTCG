@@ -102,10 +102,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                             builder: (ctx) => MultiOfferDialog(
                               cardNames: _selectedCards.toList(),
                               onSend: (offers) async {
-                                // Pour chaque carte, créer une offre
+                                // Pour chaque carte, créer une offre sur le premier listing actif disponible
+                                final activeListings = await _service.listenActiveListings().first;
                                 for (final entry in offers.entries) {
-                                  // TODO: Récupérer le listingId correspondant à la carte
-                                  // await _service.createOffer(listingId: ..., proposedPriceCents: entry.value);
+                                  final cardName = entry.key;
+                                  final priceCents = entry.value;
+                                  final matchingListings = activeListings.where(
+                                    (l) => l.cardName == cardName && l.listingType == ListingType.sale && l.status == ListingStatus.active,
+                                  ).toList();
+                                  if (matchingListings.isNotEmpty) {
+                                    final listing = matchingListings.first;
+                                    await _service.createOffer(listingId: listing.id, proposedPriceCents: priceCents);
+                                  }
                                 }
                                 setState(() {
                                   _multiSelectMode = false;
