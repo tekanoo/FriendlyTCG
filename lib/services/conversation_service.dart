@@ -222,19 +222,38 @@ class ConversationService {
   /// Flux des conversations de l'utilisateur actuel
   Stream<List<ConversationModel>> listenUserConversations() {
     final user = _auth.currentUser;
-    if (user == null) return Stream.value([]);
+    if (user == null) {
+      debugPrint('⚠️ listenUserConversations: Utilisateur non connecté');
+      return Stream.value([]);
+    }
 
+    debugPrint('🔍 listenUserConversations: Démarrage pour user ${user.uid}');
+    
     return _firestore
         .collection('conversations')
         .where('participants', arrayContains: user.uid)
         .orderBy('updatedAt', descending: true)
         .snapshots()
+        .handleError((error) {
+          debugPrint('❌ Erreur stream conversations: $error');
+          debugPrint('❌ Type erreur: ${error.runtimeType}');
+          if (error.toString().contains('permission-denied')) {
+            debugPrint('❌ Permission denied - vérifiez les règles Firestore');
+          }
+          if (error.toString().contains('index')) {
+            debugPrint('❌ Index manquant - vérifiez firestore.indexes.json');
+          }
+        })
         .asyncMap((snapshot) async {
+      debugPrint('📡 Stream conversations: ${snapshot.docs.length} documents reçus');
       final conversations = <ConversationModel>[];
       
       for (final doc in snapshot.docs) {
         try {
-          final conversation = ConversationModel.fromFirestore(doc.data(), doc.id);
+          final data = doc.data();
+          debugPrint('📄 Doc ${doc.id}: participants=${data['participants']}, sellerId=${data['sellerId']}, buyerId=${data['buyerId']}');
+          
+          final conversation = ConversationModel.fromFirestore(data, doc.id);
           
           // Récupérer les messages récents (3 derniers)
           final messagesSnapshot = await _firestore
@@ -250,11 +269,14 @@ class ConversationService {
               .toList();
 
           conversations.add(conversation.copyWith(messages: messages.reversed.toList()));
+          debugPrint('✅ Conversation ${doc.id} ajoutée (${conversation.type}, ${conversation.status})');
         } catch (e) {
           debugPrint('❌ Erreur parsing conversation ${doc.id}: $e');
+          debugPrint('❌ Stack: ${StackTrace.current}');
         }
       }
       
+      debugPrint('📋 Total conversations parsées: ${conversations.length}');
       return conversations;
     });
   }
